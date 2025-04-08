@@ -1,0 +1,3 @@
+{$DOMAIN:i18n.localhost} {
+	reverse_proxy localhost:5173
+}
