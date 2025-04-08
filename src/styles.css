@@ -1,0 +1,11 @@
+@import "tailwindcss";
+@plugin '@tailwindcss/typography';
+
+* {
+	scrollbar-width: thin;
+	scroll-behavior: smooth;
+}
+
+html {
+	min-height: 100dvh;
+}
