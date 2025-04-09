@@ -20,22 +20,3 @@ export const GET = async ({ params }) => {
 	)
 	return json(obj)
 }
-
-export const POST = async ({ params, request }) => {
-	const data = await request.json()
-
-	if (typeof data != "object" || Array.isArray(data) || data == null)
-		throw error(400, "auto-i18n.error_not_an_object")
-	if (typeof data.key != "string") throw error(400, "auto-i18n.error_missing_key")
-	if (typeof data.value != "string") throw error(400, "auto-i18n.error_missing_value")
-
-	await db
-		.insert(schema.translations)
-		.values({ lang: params.lang, category: params.category, key: data.key, value: data.value })
-		.onConflictDoUpdate({
-			target: [schema.translations.lang, schema.translations.category, schema.translations.key],
-			set: { value: data.value },
-		})
-
-	return json({ message: "auto-i18n.update_success" })
-}

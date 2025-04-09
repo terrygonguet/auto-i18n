@@ -1,7 +1,7 @@
 import { asyncMap } from "@terrygonguet/utils/async"
 import { safe } from "@terrygonguet/utils/result"
 import { createSubscriber } from "svelte/reactivity"
-import type { AutoI18NEditor } from "$lib/auto-i18n/editor"
+import type { AutoI18NEditor } from "$lib/auto-i18n/editor.svelte"
 
 export interface AutoI18NConstructorOptions {
 	lang: string
@@ -104,7 +104,7 @@ export class AutoI18N {
 
 	async showEditor() {
 		if (!this.#editor) {
-			const { AutoI18NEditor } = await import("$lib/auto-i18n/editor")
+			const { AutoI18NEditor } = await import("$lib/auto-i18n/editor.svelte")
 			this.#editor = new AutoI18NEditor(this)
 		}
 
