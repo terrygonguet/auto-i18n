@@ -4,14 +4,22 @@ import { createSubscriber } from "svelte/reactivity"
 import type { AutoI18NEditor } from "$lib/auto-i18n/editor.svelte"
 
 export interface AutoI18NConstructorOptions {
-	lang: string
+	lang: string | (() => string)
+	supportedLangs: string[] | (() => string[])
+	fallbackLang: string | (() => string)
 	fetch: typeof fetch
 }
 
+export interface TOptions {
+	autoload?: boolean
+	editor?: boolean
+	lang?: string
+	overrideMissing?: string
+}
+
 export class AutoI18N {
-	#fetch: typeof fetch
+	fetch: typeof fetch
 	#editor?: AutoI18NEditor
-	#showEditor = false
 
 	#lang: string
 	#langSubscribe: ReturnType<typeof createSubscriber>
@@ -21,12 +29,29 @@ export class AutoI18N {
 	#cacheSubscribe: ReturnType<typeof createSubscriber>
 	#cacheChange = () => {}
 
+	#supportedLangs: string[]
+	#fallbackLang: string
+
+	#loadedCategories = new Set<string>()
 	#failedCategories = new Set<string>()
 	#inFlight = new Set<string>()
 
-	constructor({ lang, fetch = globalThis.fetch }: AutoI18NConstructorOptions) {
-		this.#lang = lang
-		this.#fetch = fetch
+	constructor({
+		lang,
+		supportedLangs,
+		fallbackLang,
+		fetch = globalThis.fetch,
+	}: AutoI18NConstructorOptions) {
+		this.#lang = typeof lang == "string" ? lang : lang()
+		this.#supportedLangs = Array.isArray(supportedLangs) ? supportedLangs : supportedLangs()
+		this.#fallbackLang = typeof fallbackLang == "string" ? fallbackLang : fallbackLang()
+		if (!this.#supportedLangs.includes(this.#fallbackLang))
+			console.warn("The auto-i18n fallback language is not in the list of supported languages", {
+				fallbackLang: this.#fallbackLang,
+				supportedLangs: this.#supportedLangs,
+			})
+
+		this.fetch = fetch
 		this.#cacheSubscribe = createSubscriber((update) => {
 			this.#cacheChange = update
 		})
@@ -40,19 +65,20 @@ export class AutoI18N {
 		return this.#lang
 	}
 
-	async preload(categories: string[]) {
-		await asyncMap(categories, (category) => this.load(category), {
-			concurrent: 5,
-			withSourceIndexes: false,
-		})
+	get supportedLangs() {
+		return this.#supportedLangs
 	}
 
-	async load(category: string) {
-		const cacheKey = this.#lang + "." + category
+	get fallbackLang() {
+		return this.#fallbackLang
+	}
+
+	async load(category: string, { lang = this.#lang } = {}) {
+		const cacheKey = lang + "." + category
 		if (this.#failedCategories.has(cacheKey) || this.#inFlight.has(cacheKey)) return
 
 		this.#inFlight.add(cacheKey)
-		const [err, data] = await safe(this.#fetch(`/locale/${this.#lang}/${category}.json`))
+		const [err, data] = await safe(this.fetch(`/locale/${lang}/${category}.json`))
 			.andThen(async (res) => ({ ok: res.ok, data: await res.json() }))
 			.andThen(({ ok, data }) => {
 				if (!ok) throw new Error(data.message)
@@ -65,55 +91,83 @@ export class AutoI18N {
 			console.error("Failed to load translations", { category, lang: this.lang }, err)
 			this.#failedCategories.add(cacheKey)
 		} else {
+			this.#loadedCategories.add(category)
 			this.#cache.set(cacheKey, data)
-			this.#cacheChange()
 		}
-	}
-
-	async setLang(lang: string) {
-		const loaded: string[] = []
-		for (const cacheKey of this.#cache.keys()) {
-			if (cacheKey.startsWith(lang + ".")) {
-				const category = cacheKey.slice(lang.length + 1)
-				loaded.push(category)
-			}
-		}
-
-		this.#lang = lang
-		await this.preload(loaded)
-		this.#langChange()
 		this.#cacheChange()
 	}
 
-	t(category: string, key: string, { autoload = true, noEditor = false } = {}): string {
-		if (this.#showEditor && this.#editor && !noEditor) {
-			return this.#editor.render(category, key)
-		}
+	async setLang(lang: string) {
+		await asyncMap(
+			Array.from(this.#loadedCategories),
+			(category) => this.load(category, { lang }),
+			{ concurrent: 5 },
+		)
+		this.#lang = lang
+		this.#langChange()
+	}
+
+	t(category: string, key: string, options: TOptions = {}): string {
+		const {
+			autoload = true,
+			editor = true,
+			lang = this.#lang,
+			overrideMissing = "I18N_MISSING_KEY",
+		} = options
 
 		this.#cacheSubscribe()
-		const cacheKey = this.#lang + "." + category
+		const cacheKey = lang + "." + category
+
 		const translations = this.#cache.get(cacheKey)
-		if (!translations) {
-			if (autoload && !this.#inFlight.has(cacheKey)) this.load(category)
-			return "I18N_MISSING_CATEGORY"
+		if (!translations && autoload) this.load(category, { lang })
+
+		let value = translations?.[key]
+		if (value == undefined) {
+			// 1. wait for the content to load
+			if (this.#inFlight.has(cacheKey)) value = ""
+			// 2. try fallback lang
+			else if (lang != this.#fallbackLang)
+				value = this.t(category, key, { ...options, lang: this.#fallbackLang })
+			// 3. key is fully missing
+			else value = overrideMissing
 		}
-		const value = translations[key]
-		if (value == undefined) return "I18N_MISSING_KEY"
-		return value
+
+		return this.#editor && editor ? this.#editor.render(value, { category, key }) : value
+	}
+
+	raw(category: string, key: string, { lang = this.#lang } = {}) {
+		this.#cacheSubscribe()
+		return this.#cache.get(lang + "." + category)?.[key]
+	}
+
+	withDefaults(defaultOpts: TOptions): typeof this.t {
+		return (category: string, key: string, opts: TOptions = {}) =>
+			this.t(category, key, { ...defaultOpts, ...opts })
 	}
 
 	async showEditor() {
-		if (!this.#editor) {
-			const { AutoI18NEditor } = await import("$lib/auto-i18n/editor.svelte")
-			this.#editor = new AutoI18NEditor(this)
-		}
+		const { AutoI18NEditor } = await import("$lib/auto-i18n/editor.svelte")
+		this.#editor = new AutoI18NEditor(this)
 
-		this.#showEditor = true
+		// TODO: find a way to do that in AutoI18NEditor
+		const [err, data] = await safe(this.fetch("/locale/all.json"))
+			.andThen((res) => res.json())
+			.asTuple()
+		if (err) return console.error("Failed to load all translations", err)
+
+		for (const [lang, categories] of Object.entries<any>(data)) {
+			for (const [category, keys] of Object.entries<any>(categories)) {
+				const cacheKey = lang + "." + category
+				this.#cache.set(cacheKey, keys)
+				this.#loadedCategories.add(category)
+			}
+		}
 		this.#cacheChange()
 	}
 
 	hideEditor() {
-		this.#showEditor = false
+		this.#editor?.destroy()
+		this.#editor = undefined
 		this.#cacheChange()
 	}
 }
