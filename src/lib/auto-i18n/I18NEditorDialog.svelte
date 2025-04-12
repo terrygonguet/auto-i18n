@@ -1,6 +1,6 @@
 <script module lang="ts">
 	export type EditorOpenRadio = Radio<
-		[category: string, key: string, values: Record<string, string | number>, anchorEl?: HTMLElement]
+		[category: string, key: string, values: Record<string, TValue>, anchorEl?: HTMLElement]
 	>
 
 	export type EditorCloseRadio = Radio<[], string>
@@ -8,8 +8,9 @@
 	export interface Props {
 		category?: string
 		key?: string
-		values?: Record<string, string | number>
+		values?: Record<string, TValue>
 		anchorEl?: HTMLElement
+		autoload?: boolean
 		open: EditorOpenRadio["reciever"]
 		close: EditorCloseRadio["reciever"]
 		onChange?(): void
@@ -19,13 +20,22 @@
 <script lang="ts">
 	import { getContext, tick, untrack } from "svelte"
 	import type { Radio } from "$lib/radio"
-	import type { AutoI18N } from "$lib/auto-i18n"
+	import type { AutoI18N, TValue } from "$lib/auto-i18n"
 	import { safe } from "@terrygonguet/utils/result"
 
-	let { category = "", key = "", values = {}, anchorEl, open, close, onChange }: Props = $props()
+	let {
+		category = "",
+		key = "",
+		values = {},
+		anchorEl,
+		autoload = false,
+		open,
+		close,
+		onChange,
+	}: Props = $props()
 
 	let i18n = getContext<AutoI18N>("i18n")
-	let t = $derived(i18n.withDefaults({ editor: false, autoload: false }))
+	let t = $derived(i18n.withDefaults({ editor: false, autoload }))
 
 	let scrollY = $state(0)
 
@@ -111,13 +121,16 @@
 		<input name="key" value={key} type="hidden" required />
 
 		{#if hasValues}
-			<div class="grid w-full grid-cols-[auto_1fr] gap-2">
-				<p class="col-span-2 text-center underline">
+			<div class="grid w-full grid-cols-[auto_auto_1fr] gap-2">
+				<p class="col-span-3 text-center underline">
 					{t("auto-i18n", "title_values", { overrideMissing: "Values" })}
 				</p>
 				{#each Object.entries(values) as [name, value]}
-					<span>{name}</span>
-					<code class="overflow-hidden overflow-ellipsis whitespace-nowrap">{value}</code>
+					<span class="text-end">{name}</span>
+					<span>:</span>
+					<code class="overflow-hidden overflow-ellipsis whitespace-nowrap">
+						{typeof value == "object" ? value.visible : value}
+					</code>
 				{/each}
 			</div>
 		{/if}

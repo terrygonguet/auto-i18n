@@ -15,8 +15,13 @@ export interface TOptions {
 	editor?: boolean
 	lang?: string
 	overrideMissing?: string
-	values?: Record<string, string | number>
+	values?: Record<string, TValue>
 }
+
+export type TValue =
+	| string
+	| number
+	| { prefix?: string; visible: string | number; suffix?: string }
 
 export class AutoI18N {
 	fetch: typeof fetch
@@ -89,7 +94,7 @@ export class AutoI18N {
 		this.#inFlight.delete(cacheKey)
 
 		if (err) {
-			console.error("Failed to load translations", { category, lang: this.lang }, err)
+			console.error("Failed to load translations", { category, lang }, err)
 			this.#failedCategories.add(cacheKey)
 		} else {
 			this.#loadedCategories.add(category)
@@ -166,14 +171,16 @@ export class AutoI18N {
 		return text
 	}
 
-	interpolate(text: string, values: Record<string, string | number>) {
+	interpolate(text: string, values: Record<string, TValue>) {
 		let istart = 0
 		let iend = 0
 		while ((istart = text.indexOf("{{", istart)) != -1) {
 			iend = text.indexOf("}}", istart)
 			if (iend == -1) break
 			const expr = text.slice(istart + 2, iend)
-			const value = values[expr] ?? ""
+			let value = values[expr] ?? ""
+			if (typeof value == "object")
+				value = (value.prefix ?? "") + value.visible + (value.suffix ?? "")
 			text = text.slice(0, istart) + value + text.slice(iend + 2)
 		}
 		return text
@@ -184,10 +191,14 @@ export class AutoI18N {
 			this.t(category, key, { ...defaultOpts, ...opts })
 	}
 
-	async showEditor() {
+	get isEditorShown() {
+		return !!this.#editor
+	}
+
+	async showEditor({ autoload = false } = {}) {
 		if (!this.#editor) {
 			const { AutoI18NEditor } = await import("$lib/auto-i18n/editor.svelte")
-			this.#editor = new AutoI18NEditor(this)
+			this.#editor = new AutoI18NEditor(this, { autoload })
 		}
 		this.loadAll()
 	}

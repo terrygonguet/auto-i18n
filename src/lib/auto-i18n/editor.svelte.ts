@@ -1,4 +1,4 @@
-import type { AutoI18N } from "$lib/auto-i18n"
+import type { AutoI18N, TValue } from "$lib/auto-i18n"
 import I18NEditorDialog, {
 	type EditorCloseRadio,
 	type EditorOpenRadio,
@@ -20,7 +20,7 @@ export class AutoI18NEditor {
 
 	#onDestroy = noop
 
-	constructor(i18n: AutoI18N) {
+	constructor(i18n: AutoI18N, { autoload = false } = {}) {
 		this.i18n = i18n
 
 		const off = on(
@@ -40,6 +40,7 @@ export class AutoI18NEditor {
 				["i18n", this.i18n],
 			]),
 			props: {
+				autoload,
 				open: this.#dialogOpenRadio.reciever,
 				close: this.#dialogCloseRadio.reciever,
 			},
@@ -51,7 +52,7 @@ export class AutoI18NEditor {
 		}
 	}
 
-	render(text: string, category: string, key: string, values: Record<string, string | number>) {
+	render(text: string, category: string, key: string, values: Record<string, TValue>) {
 		return html`<span
 			class="i18n-fragment"
 			data-i18n-category="${category}"

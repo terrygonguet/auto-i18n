@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
 	import "$$/styles.css"
 	import { page } from "$app/state"
 
@@ -7,8 +7,15 @@
 	let { i18n, t } = $derived(page.data)
 	let segment = $derived(page.route.id)
 
-	$effect(() => void i18n.showEditor())
+	function onKeydown(evt: KeyboardEvent) {
+		if (evt.code == "Backslash" && evt.ctrlKey && evt.shiftKey) {
+			if (i18n.isEditorShown) i18n.hideEditor()
+			else i18n.showEditor({ autoload: true })
+		}
+	}
 </script>
+
+<svelte:body onkeydown={onKeydown} />
 
 <header class="border-b border-stone-300 bg-stone-100 text-2xl">
 	<nav class="p-8">
@@ -41,7 +48,11 @@
 	<p>
 		{@html t("footer", "made_by", {
 			values: {
-				name: `<a href="https://terry.gonguet.com" target="_blank" class="text-amber-700 underline">Terry Gonguet</a>`,
+				name: {
+					prefix: `<a href="https://terry.gonguet.com" target="_blank" class="text-amber-700 underline">`,
+					visible: "Terry Gonguet",
+					suffix: "</a>",
+				},
 				year: "2025",
 			},
 		})}
