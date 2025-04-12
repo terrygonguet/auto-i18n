@@ -1,4 +1,3 @@
-import { createSubscriber } from "svelte/reactivity"
 import type { AutoI18N } from "$lib/auto-i18n"
 import I18NEditorDialog, {
 	type EditorCloseRadio,
@@ -8,6 +7,7 @@ import { mount, unmount } from "svelte"
 import { createRadio } from "$lib/radio"
 import { on } from "svelte/events"
 import { noop } from "@terrygonguet/utils"
+import { safeParse } from "@terrygonguet/utils/json"
 
 const html = String.raw
 
@@ -51,9 +51,14 @@ export class AutoI18NEditor {
 		}
 	}
 
-	render(value: string, { category, key }: { category: string; key: string }) {
-		return html`<span class="i18n-fragment" data-i18n-category="${category}" data-i18n-key="${key}">
-			${value}
+	render(text: string, category: string, key: string, values: Record<string, string | number>) {
+		return html`<span
+			class="i18n-fragment"
+			data-i18n-category="${category}"
+			data-i18n-key="${key}"
+			data-i18n-values="${encodeURIComponent(JSON.stringify(values))}"
+		>
+			${text}
 		</span>`
 	}
 
@@ -61,8 +66,9 @@ export class AutoI18NEditor {
 		evt.stopPropagation()
 		evt.preventDefault()
 		const button = evt.target as HTMLButtonElement
-		const { i18nCategory, i18nKey } = button.dataset
-		this.#dialogOpenRadio.emitter(i18nCategory!, i18nKey!, button)
+		const { i18nCategory, i18nKey, i18nValues } = button.dataset
+		const values = safeParse(decodeURIComponent(i18nValues!), {})
+		this.#dialogOpenRadio.emitter(i18nCategory!, i18nKey!, values, button)
 	}
 
 	destroy() {

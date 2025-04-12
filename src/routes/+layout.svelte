@@ -39,11 +39,13 @@
 {@render children()}
 <footer class="flex items-center justify-center gap-6 border-t border-stone-300 bg-stone-100 p-10">
 	<p>
-		By <a href="https://terry.gonguet.com" target="_blank" class="text-amber-700 underline"
-			>Terry Gonguet</a
-		> 2025
+		{@html t("footer", "made_by", {
+			values: {
+				name: `<a href="https://terry.gonguet.com" target="_blank" class="text-amber-700 underline">Terry Gonguet</a>`,
+				year: "2025",
+			},
+		})}
 	</p>
-	<button onclick={() => i18n.showEditor()}>{@html t("footer", "show_editor")}</button>
 </footer>
 
 <style>
