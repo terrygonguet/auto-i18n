@@ -109,35 +109,39 @@
 
 <svelte:window bind:scrollY />
 
+<div class="pointer-events-none fixed inset-0 z-50 border-2 border-teal-500"></div>
+
 <dialog
 	bind:this={dialogEl}
 	style:transform
-	class="absolute top-0 left-0 border border-stone-300 shadow backdrop:bg-transparent"
+	class="bg-tea absolute top-0 left-0 border border-teal-300 shadow backdrop:bg-transparent"
 	onclick={onDialogClick}
 >
 	<form class="flex w-min flex-col gap-4 p-4" onsubmit={onSubmit}>
-		<p class="text-center text-xl"><code>{category}.{key}</code></p>
+		<p class="text-center text-xl">
+			<code class="rounded bg-teal-100 px-2 py-1">{category}.{key}</code>
+		</p>
 		<input name="category" value={category} type="hidden" required />
 		<input name="key" value={key} type="hidden" required />
 
 		{#if hasValues}
 			<div class="grid w-full grid-cols-[auto_auto_1fr] gap-2">
-				<p class="col-span-3 text-center underline">
+				<p class="col-span-3 text-center underline decoration-teal-300">
 					{t("auto-i18n", "title_values", { overrideMissing: "Values" })}
 				</p>
 				{#each Object.entries(values) as [name, value]}
-					<span class="text-end">{name}</span>
+					<code class="text-end">{"{{" + name + "}}"}</code>
 					<span>:</span>
-					<code class="overflow-hidden overflow-ellipsis whitespace-nowrap">
+					<span class="overflow-hidden overflow-ellipsis whitespace-nowrap">
 						{typeof value == "object" ? value.visible : value}
-					</code>
+					</span>
 				{/each}
 			</div>
 		{/if}
 
 		<div class="grid min-w-md grid-cols-[auto_1fr_auto] gap-2">
 			{#if hasValues}
-				<p class="col-span-3 text-center underline">
+				<p class="col-span-3 text-center underline decoration-teal-300">
 					{t("auto-i18n", "title_translations", { overrideMissing: "Translations" })}
 				</p>
 			{/if}
@@ -146,25 +150,26 @@
 				<input
 					id="i18-editor-value-{lang}"
 					name={lang}
-					class="border-b border-stone-300 px-1 font-mono"
+					class="border-b border-teal-300 px-1 font-mono"
 					value={i18n.raw(category, key, { lang })}
 					placeholder={t("auto-i18n", "value_placeholder", { overrideMissing: "Missing value" })}
 				/>
 				<div class="flex items-center gap-2 text-sm">
 					{#if lang == i18n.lang}
-						<span class="text-green-700">
-							{t("auto-i18n", "lang_current", { overrideMissing: "Current" })}
-						</span>
+						{@const label = t("auto-i18n", "lang_current", { overrideMissing: "Current" })}
+						<span class="text-teal-700" title={label}>{label.charAt(0)}</span>
 					{/if}
 					{#if lang == i18n.fallbackLang}
-						<span class="text-amber-700">
-							{t("auto-i18n", "lang_fallback", { overrideMissing: "Fallback" })}
-						</span>
+						{@const label = t("auto-i18n", "lang_fallback", { overrideMissing: "Fallback" })}
+						<span class="text-indigo-700" title={label}>{label.charAt(0)}</span>
 					{/if}
 				</div>
 			{/each}
 		</div>
-		<button type="submit" class="mx-auto block cursor-pointer border border-stone-500 px-2">
+		<button
+			type="submit"
+			class="mx-auto block cursor-pointer border border-teal-500 bg-teal-100 px-2 transition-colors hover:bg-teal-50"
+		>
 			{t("auto-i18n", "btn_save", { overrideMissing: "Save" })}
 		</button>
 	</form>

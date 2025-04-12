@@ -79,9 +79,10 @@ export class AutoI18N {
 		return this.#fallbackLang
 	}
 
-	async load(category: string, { lang = this.#lang } = {}) {
+	async load(category: string, { lang = this.#lang, skipIfCached = false } = {}) {
 		const cacheKey = lang + "." + category
 		if (this.#failedCategories.has(cacheKey) || this.#inFlight.has(cacheKey)) return
+		if (skipIfCached && this.#cache.has(cacheKey)) return
 
 		this.#inFlight.add(cacheKey)
 		const [err, data] = await safe(this.fetch(`/locale/${lang}/${category}.json`))
@@ -123,7 +124,7 @@ export class AutoI18N {
 	async setLang(lang: string) {
 		await asyncMap(
 			Array.from(this.#loadedCategories),
-			(category) => this.load(category, { lang }),
+			(category) => this.load(category, { lang, skipIfCached: true }),
 			{ concurrent: 5 },
 		)
 		this.#lang = lang

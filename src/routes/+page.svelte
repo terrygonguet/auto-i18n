@@ -1,6 +1,9 @@
 <script>
+	import { page } from "$app/state"
 	import { fadeParams } from "$lib/transition"
 	import { fade } from "svelte/transition"
+
+	const { i18n, t } = $derived(page.data)
 </script>
 
 <main in:fade={fadeParams.in} out:fade={fadeParams.out} class="prose mx-auto my-12">
@@ -9,6 +12,14 @@
 		Id velit officia nostrud ipsum non reprehenderit fugiat incididunt. Ullamco dolor cupidatat
 		dolore et cupidatat adipisicing culpa elit. Elit aliquip occaecat ex ea aliqua voluptate est id.
 	</p>
+	<div class="flex items-center justify-center gap-4">
+		<button class="cursor-pointer border px-2 py-1" onclick={() => i18n.setLang("en")}
+			>{@html t("home", "swap_to_en")}</button
+		>
+		<button class="cursor-pointer border px-2 py-1" onclick={() => i18n.setLang("fr")}
+			>{@html t("home", "swap_to_fr")}</button
+		>
+	</div>
 	<p>
 		Non nulla dolor sint excepteur laborum qui. Aliquip in est excepteur deserunt elit ad et
 		deserunt. Adipisicing veniam sit magna dolor exercitation aute nisi eu irure sit. Commodo
