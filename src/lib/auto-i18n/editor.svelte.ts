@@ -27,8 +27,12 @@ export class AutoI18NEditor {
 			document,
 			"click",
 			(evt) => {
-				const target = evt.target as HTMLElement
-				if (target.matches("span.i18n-fragment")) this.onClick(evt)
+				const fragment = (evt.target as Element).closest<HTMLElement>("div.i18n-fragment")
+				if (fragment) {
+					evt.stopPropagation()
+					evt.preventDefault()
+					this.showDialog(fragment)
+				}
 			},
 			{ capture: true },
 		)
@@ -52,24 +56,50 @@ export class AutoI18NEditor {
 		}
 	}
 
-	render(text: string, category: string, key: string, values: NonNullable<TOptions["values"]>) {
-		return html`<span
+	renderTranslation(
+		text: string,
+		category: string,
+		key: string,
+		values: NonNullable<TOptions["values"]>,
+	) {
+		return html`<div
 			class="i18n-fragment"
+			data-i18n-type="translation"
 			data-i18n-category="${category}"
 			data-i18n-key="${key}"
 			data-i18n-values="${encodeURIComponent(JSON.stringify(values))}"
 		>
 			${text}
-		</span>`
+		</div>`
 	}
 
-	onClick(evt: Event) {
-		evt.stopPropagation()
-		evt.preventDefault()
-		const button = evt.target as HTMLButtonElement
-		const { i18nCategory, i18nKey, i18nValues } = button.dataset
-		const values = safeParse(decodeURIComponent(i18nValues!), {})
-		this.#dialogOpenRadio.emitter(i18nCategory!, i18nKey!, values, button)
+	renderContent(content: string, { url }: { url?: string }) {
+		return html`<div
+			class="i18n-fragment"
+			data-i18n-type="content"
+			${url ? 'data-i18n-url="' + url + '"' : ""}
+		>
+			${content}
+		</div>`
+	}
+
+	showDialog(anchorEl: HTMLElement) {
+		const {
+			i18nType: type,
+			i18nCategory: category,
+			i18nKey: key,
+			i18nValues,
+			i18nUrl: url,
+		} = anchorEl.dataset as Record<string, string>
+		switch (type) {
+			case "translation":
+				const values = safeParse(decodeURIComponent(i18nValues), {})
+				this.#dialogOpenRadio.emitter({ type, category, key, values, anchorEl })
+				break
+			case "content":
+				this.#dialogOpenRadio.emitter({ type, url })
+				break
+		}
 	}
 
 	destroy() {

@@ -26,6 +26,8 @@ export type TValue =
 export class AutoI18N {
 	fetch: typeof fetch
 	#editor?: AutoI18NEditor
+	#editorSubscibe: ReturnType<typeof createSubscriber>
+	#editorChange = () => {}
 
 	#lang: string
 	#langSubscribe: ReturnType<typeof createSubscriber>
@@ -59,6 +61,9 @@ export class AutoI18N {
 			})
 
 		this.fetch = fetch
+		this.#editorSubscibe = createSubscriber((update) => {
+			this.#editorChange = update
+		})
 		this.#cacheSubscribe = createSubscriber((update) => {
 			this.#cacheChange = update
 		})
@@ -148,7 +153,10 @@ export class AutoI18N {
 		this.#langChange()
 	}
 
-	t(category: string, key: string, options: TOptions = {}): string {
+	get t() {
+		return this.translate
+	}
+	translate(category: string, key: string, options: TOptions = {}): string {
 		const {
 			autoload = true,
 			editor = true,
@@ -159,6 +167,7 @@ export class AutoI18N {
 
 		this.#cacheSubscribe()
 		this.#langSubscribe()
+		this.#editorSubscibe()
 		const cacheKey = lang + "." + category
 
 		const translations = this.#cache.get(cacheKey)
@@ -173,9 +182,11 @@ export class AutoI18N {
 				text = this.t(category, key, { ...options, lang: this.#fallbackLang })
 			// 3. key is fully missing
 			else text = overrideMissing
-		} else text = this.interpolate(text, values)
+		} else text = this.interpolate(text, values, options)
 
-		return this.#editor && editor ? this.#editor.render(text, category, key, values) : text
+		return this.#editor && editor
+			? this.#editor.renderTranslation(text, category, key, values)
+			: text
 	}
 
 	raw(
@@ -189,7 +200,11 @@ export class AutoI18N {
 		return text
 	}
 
-	interpolate(text: string, values: NonNullable<TOptions["values"]>) {
+	interpolate(
+		text: string,
+		values: NonNullable<TOptions["values"]>,
+		options: Pick<TOptions, "autoload" | "lang" | "overrideMissing"> = {},
+	) {
 		let start = 0
 		let end = 0
 		let lastEnd = 0
@@ -198,17 +213,17 @@ export class AutoI18N {
 			end = text.indexOf("}}", start)
 			if (end == -1) break
 			let value = ""
-			const expr = text.slice(start + 2, end)
+			const expr = text.slice(start + 2, end).trim()
 			if (expr.startsWith("$t")) {
 				const parts = expr.split(/\s+/)
-				if (parts.length < 3 || parts.length > 4) {
-					console.error("[auto-i18n] Failed to interpolate $t: invalid number of values", {
+				if (parts.length < 3) {
+					console.error("[auto-i18n] Failed to interpolate $t: too few values", {
 						expression: expr,
 					})
 					value = "I18N_INTERPOLATE_ERROR"
 				} else {
-					const [, category, key, lang = this.#lang] = parts
-					value = this.t(category, key, { autoload: false, editor: false, values, lang })
+					const [, category, key, lang = options.lang ?? this.#lang] = parts
+					value = this.t(category, key, { ...options, editor: false, values, lang })
 				}
 			} else if (expr.startsWith("$count")) {
 				if (values.count == undefined)
@@ -232,7 +247,7 @@ export class AutoI18N {
 					value = val ?? ""
 				}
 			} else {
-				const tvalue = values[expr.trim()]
+				const tvalue = values[expr]
 				if (typeof tvalue == "object")
 					value = (tvalue.prefix ?? "") + tvalue.visible + (tvalue.suffix ?? "")
 				else if (typeof tvalue == "string") value = tvalue
@@ -244,12 +259,24 @@ export class AutoI18N {
 		return result + text.slice(lastEnd)
 	}
 
+	get c() {
+		return this.content
+	}
+	content(
+		content: string,
+		{ editor = true, url }: { editor?: TOptions["editor"]; url?: string } = {},
+	) {
+		this.#editorSubscibe()
+		return this.#editor && editor ? this.#editor.renderContent(content, { url }) : content
+	}
+
 	withDefaults(defaultOpts: TOptions): typeof this.t {
 		return (category: string, key: string, opts: TOptions = {}) =>
 			this.t(category, key, { ...defaultOpts, ...opts })
 	}
 
 	get isEditorShown() {
+		this.#editorSubscibe()
 		return !!this.#editor
 	}
 
@@ -257,6 +284,7 @@ export class AutoI18N {
 		if (!this.#editor) {
 			const { AutoI18NEditor } = await import("$lib/auto-i18n/editor.svelte")
 			this.#editor = new AutoI18NEditor(this, { autoload })
+			this.#editorChange()
 		}
 		this.loadAll()
 	}
@@ -265,7 +293,7 @@ export class AutoI18N {
 		if (this.#editor) {
 			this.#editor.destroy()
 			this.#editor = undefined
-			this.#cacheChange()
+			this.#editorChange()
 		}
 	}
 }

@@ -1,15 +1,20 @@
 <script module lang="ts">
 	export type EditorOpenRadio = Radio<
-		[category: string, key: string, values: Record<string, TValue>, anchorEl?: HTMLElement]
+		[
+			| {
+					type: "translation"
+					category: string
+					key: string
+					values: Record<string, TValue>
+					anchorEl?: HTMLElement
+			  }
+			| { type: "content"; url?: string },
+		]
 	>
 
 	export type EditorCloseRadio = Radio<[], string>
 
 	export interface Props {
-		category?: string
-		key?: string
-		values?: Record<string, TValue>
-		anchorEl?: HTMLElement
 		autoload?: boolean
 		open: EditorOpenRadio["reciever"]
 		close: EditorCloseRadio["reciever"]
@@ -20,19 +25,17 @@
 <script lang="ts">
 	import { getContext, tick, untrack } from "svelte"
 	import type { Radio } from "$lib/radio"
-	import type { AutoI18N, TValue } from "$lib/auto-i18n"
+	import { type TOptions, type AutoI18N, type TValue } from "$lib/auto-i18n"
 	import { safe } from "@terrygonguet/utils/result"
 
-	let {
-		category = "",
-		key = "",
-		values = {},
-		anchorEl,
-		autoload = false,
-		open,
-		close,
-		onChange,
-	}: Props = $props()
+	let { autoload = false, open, close, onChange }: Props = $props()
+
+	let mode = $state<"translation" | "content">("translation")
+	let category = $state("")
+	let key = $state("")
+	let values = $state<NonNullable<TOptions["values"]>>({})
+	let anchorEl = $state<HTMLElement>()
+	let url = $state<string>()
 
 	let i18n = getContext<AutoI18N>("i18n")
 	let t = $derived(i18n.withDefaults({ editor: false, autoload }))
@@ -43,7 +46,9 @@
 
 	let dialogEl = $state<HTMLDialogElement>()!
 	let targetRect = $derived(
-		anchorEl?.getBoundingClientRect() ?? new DOMRect(innerWidth / 2, innerHeight / 3, 0, 0),
+		anchorEl
+			? getChildrenBoundingRect(anchorEl)
+			: new DOMRect(innerWidth / 2, innerHeight / 3, 0, 0),
 	)
 	let placementMode: "under" | "above" = $derived(
 		targetRect.top > innerHeight / 2 ? "above" : "under",
@@ -61,12 +66,22 @@
 	)
 
 	$effect(() =>
-		open((newCategory, newKey, newValues, newAnchorEl) => {
-			category = newCategory
-			key = newKey
-			values = newValues
-			anchorEl = newAnchorEl
-			tick().then(() => dialogEl.showModal())
+		open((args) => {
+			switch (args.type) {
+				case "translation":
+					mode = "translation"
+					category = args.category
+					key = args.key
+					values = args.values
+					anchorEl = args.anchorEl
+					tick().then(() => dialogEl.showModal())
+					break
+				case "content":
+					mode = "content"
+					url = args.url
+					tick().then(() => dialogEl.showModal())
+					break
+			}
 		}),
 	)
 	$effect(() =>
@@ -75,6 +90,12 @@
 			return dialogEl.returnValue ?? ""
 		}),
 	)
+
+	function getChildrenBoundingRect(element: HTMLElement) {
+		const range = document.createRange()
+		range.selectNode(element)
+		return range.getBoundingClientRect()
+	}
 
 	async function onSubmit(evt: SubmitEvent) {
 		evt.preventDefault()
@@ -117,60 +138,83 @@
 	class="bg-tea absolute top-0 left-0 border border-teal-300 shadow backdrop:bg-teal-50/50"
 	onclick={onDialogClick}
 >
-	<form class="flex w-min flex-col gap-4 p-4" onsubmit={onSubmit}>
-		<p class="text-center text-xl">
-			<code class="rounded bg-teal-100 px-2 py-1">{category}.{key}</code>
-		</p>
-		<input name="category" value={category} type="hidden" required />
-		<input name="key" value={key} type="hidden" required />
+	{#if mode == "translation"}
+		<form class="flex w-min flex-col gap-4 p-4" onsubmit={onSubmit}>
+			<p class="text-center text-xl">
+				<code class="rounded bg-teal-100 px-2 py-1">{category}.{key}</code>
+			</p>
+			<input name="category" value={category} type="hidden" required />
+			<input name="key" value={key} type="hidden" required />
 
-		{#if hasValues}
-			<div class="grid w-full grid-cols-[auto_auto_1fr] gap-2">
-				<p class="col-span-3 text-center underline decoration-teal-300">
-					{t("auto-i18n", "title_values", { overrideMissing: "Values" })}
-				</p>
-				{#each Object.entries(values) as [name, value]}
-					<code class="text-end">{"{{" + name + "}}"}</code>
-					<span>:</span>
-					<span class="overflow-hidden overflow-ellipsis whitespace-nowrap">
-						{typeof value == "object" ? value.visible : value}
-					</span>
+			{#if hasValues}
+				<div class="grid w-full grid-cols-[auto_auto_1fr] gap-2">
+					<p class="col-span-3 text-center underline decoration-teal-300">
+						{t("auto-i18n", "title_values", { overrideMissing: "Values" })}
+					</p>
+					{#each Object.entries(values) as [name, value]}
+						<code class="text-end">{"{{" + name + "}}"}</code>
+						<span>:</span>
+						<span class="overflow-hidden overflow-ellipsis whitespace-nowrap">
+							{typeof value == "object" ? value.visible : value}
+						</span>
+					{/each}
+				</div>
+			{/if}
+
+			<div class="grid min-w-md grid-cols-[auto_1fr_auto] gap-2">
+				{#if hasValues}
+					<p class="col-span-3 text-center underline decoration-teal-300">
+						{t("auto-i18n", "title_translations", { overrideMissing: "Translations" })}
+					</p>
+				{/if}
+				{#each i18n.supportedLangs as lang}
+					<label for="i18n-editor-value-{lang}"><code>{lang}</code></label>
+					<input
+						id="i18-editor-value-{lang}"
+						name={lang}
+						class="border-b border-teal-300 px-1 font-mono"
+						value={i18n.raw(category, key, { lang })}
+						placeholder={t("auto-i18n", "value_placeholder", { overrideMissing: "Missing value" })}
+					/>
+					<div class="flex items-center gap-2 text-sm">
+						{#if lang == i18n.lang}
+							{@const label = t("auto-i18n", "lang_current", { overrideMissing: "Current" })}
+							<span class="text-teal-700" title={label}>{label.charAt(0)}</span>
+						{/if}
+						{#if lang == i18n.fallbackLang}
+							{@const label = t("auto-i18n", "lang_fallback", { overrideMissing: "Fallback" })}
+							<span class="text-indigo-700" title={label}>{label.charAt(0)}</span>
+						{/if}
+					</div>
 				{/each}
 			</div>
-		{/if}
-
-		<div class="grid min-w-md grid-cols-[auto_1fr_auto] gap-2">
-			{#if hasValues}
-				<p class="col-span-3 text-center underline decoration-teal-300">
-					{t("auto-i18n", "title_translations", { overrideMissing: "Translations" })}
+			<button
+				type="submit"
+				class="mx-auto block cursor-pointer border border-teal-500 bg-teal-100 px-2 transition-colors hover:bg-teal-50"
+			>
+				{t("auto-i18n", "btn_save", { overrideMissing: "Save" })}
+			</button>
+		</form>
+	{:else if mode == "content"}
+		<div class="flex max-w-prose flex-col gap-4 p-4">
+			<p>
+				{@html t("auto-i18n", "external_content", {
+					overrideMissing: "This text is external content not managed by Auto-i18n.",
+				})}
+			</p>
+			{#if url}
+				<p class="text-center">
+					<a href={url} target="_blank" class="text-teal-700 underline">
+						{@html t("auto-i18n", "content_url", { overrideMissing: "View content" })}
+					</a>
 				</p>
 			{/if}
-			{#each i18n.supportedLangs as lang}
-				<label for="i18n-editor-value-{lang}"><code>{lang}</code></label>
-				<input
-					id="i18-editor-value-{lang}"
-					name={lang}
-					class="border-b border-teal-300 px-1 font-mono"
-					value={i18n.raw(category, key, { lang })}
-					placeholder={t("auto-i18n", "value_placeholder", { overrideMissing: "Missing value" })}
-				/>
-				<div class="flex items-center gap-2 text-sm">
-					{#if lang == i18n.lang}
-						{@const label = t("auto-i18n", "lang_current", { overrideMissing: "Current" })}
-						<span class="text-teal-700" title={label}>{label.charAt(0)}</span>
-					{/if}
-					{#if lang == i18n.fallbackLang}
-						{@const label = t("auto-i18n", "lang_fallback", { overrideMissing: "Fallback" })}
-						<span class="text-indigo-700" title={label}>{label.charAt(0)}</span>
-					{/if}
-				</div>
-			{/each}
 		</div>
-		<button
-			type="submit"
-			class="mx-auto block cursor-pointer border border-teal-500 bg-teal-100 px-2 transition-colors hover:bg-teal-50"
-		>
-			{t("auto-i18n", "btn_save", { overrideMissing: "Save" })}
-		</button>
-	</form>
+	{/if}
 </dialog>
+
+<style>
+	:global(.i18n-fragment) {
+		display: contents;
+	}
+</style>
