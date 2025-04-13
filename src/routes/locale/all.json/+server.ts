@@ -1,10 +1,25 @@
-import { db, schema } from "$$/lib/server/db"
+import { db, schema } from "$lib/server/db"
 import { error, json } from "@sveltejs/kit"
 import { safe } from "@terrygonguet/utils/result"
-import { sql } from "drizzle-orm"
+import { and, inArray, sql } from "drizzle-orm"
 
-export const GET = async () => {
+export const GET = async ({ url }) => {
+	const categoriesParam = url.searchParams.get("categories")
+	const categories = categoriesParam?.split(",") ?? []
+	const categoriesWhere =
+		categories.length > 0 ? inArray(schema.translations.category, categories) : undefined
+
+	const langsParams = url.searchParams.get("langs")
+	const langs = langsParams?.split(",") ?? []
+	const langsWhere = langs.length > 0 ? inArray(schema.translations.lang, langs) : undefined
+
+	const where =
+		categoriesWhere && langsWhere
+			? and(categoriesWhere, langsWhere)
+			: (categoriesWhere ?? langsWhere)
+
 	const data = await db.query.translations.findMany({
+		where,
 		columns: { lang: true, category: true, key: true, value: true },
 	})
 

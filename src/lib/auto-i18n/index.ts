@@ -1,4 +1,3 @@
-import { asyncMap } from "@terrygonguet/utils/async"
 import { safe } from "@terrygonguet/utils/result"
 import { createSubscriber } from "svelte/reactivity"
 import type { AutoI18NEditor } from "$lib/auto-i18n/editor.svelte"
@@ -7,6 +6,7 @@ export interface AutoI18NConstructorOptions {
 	lang: string | (() => string)
 	supportedLangs: string[] | (() => string[])
 	fallbackLang: string | (() => string)
+	preload?: string[]
 	fetch: typeof fetch
 }
 
@@ -46,6 +46,7 @@ export class AutoI18N {
 		lang,
 		supportedLangs,
 		fallbackLang,
+		preload,
 		fetch = globalThis.fetch,
 	}: AutoI18NConstructorOptions) {
 		this.#lang = typeof lang == "string" ? lang : lang()
@@ -64,6 +65,8 @@ export class AutoI18N {
 		this.#langSubscribe = createSubscriber((update) => {
 			this.#langChange = update
 		})
+
+		if (preload) this.loadAll({ categories: preload, langs: [this.#lang, this.#fallbackLang] })
 	}
 
 	get lang() {
@@ -81,8 +84,13 @@ export class AutoI18N {
 
 	async load(category: string, { lang = this.#lang, skipIfCached = false } = {}) {
 		const cacheKey = lang + "." + category
-		if (this.#failedCategories.has(cacheKey) || this.#inFlight.has(cacheKey)) return
-		if (skipIfCached && this.#cache.has(cacheKey)) return
+		if (
+			this.#failedCategories.has(cacheKey) ||
+			this.#inFlight.has(cacheKey) ||
+			this.#inFlight.has("all") ||
+			(skipIfCached && this.#cache.has(cacheKey))
+		)
+			return
 
 		this.#inFlight.add(cacheKey)
 		const [err, data] = await safe(this.fetch(`/locale/${lang}/${category}.json`))
@@ -104,12 +112,18 @@ export class AutoI18N {
 		this.#cacheChange()
 	}
 
-	async loadAll() {
-		// TODO: find a way to do that in AutoI18NEditor
-		const [err, data] = await safe(this.fetch("/locale/all.json"))
+	async loadAll({ categories, langs }: { categories?: string[]; langs?: string[] } = {}) {
+		const search = new URLSearchParams()
+		if (categories?.length) search.set("categories", categories.join(","))
+		if (langs?.length) search.set("langs", langs.join(","))
+
+		this.#inFlight.add("all")
+		const url = "/locale/all.json" + (search.size ? "?" + search : "")
+		const [err, data] = await safe(this.fetch(url))
 			.andThen((res) => res.json())
 			.asTuple()
-		if (err) return console.error("Failed to load all translations", err)
+		this.#inFlight.delete("all")
+		if (err) console.error("Failed to load all translations", err)
 
 		for (const [lang, categories] of Object.entries<any>(data)) {
 			for (const [category, keys] of Object.entries<any>(categories)) {
@@ -118,15 +132,12 @@ export class AutoI18N {
 				this.#loadedCategories.add(category)
 			}
 		}
+
 		this.#cacheChange()
 	}
 
 	async setLang(lang: string) {
-		await asyncMap(
-			Array.from(this.#loadedCategories),
-			(category) => this.load(category, { lang, skipIfCached: true }),
-			{ concurrent: 5 },
-		)
+		await this.loadAll({ categories: Array.from(this.#loadedCategories), langs: [lang] })
 		this.#lang = lang
 		this.#langChange()
 	}
