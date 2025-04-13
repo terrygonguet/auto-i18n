@@ -7,11 +7,8 @@
 </script>
 
 <main in:fade={fadeParams.in} out:fade={fadeParams.out} class="prose mx-auto my-12">
-	<h2>Auto-i18n</h2>
-	<p>
-		Id velit officia nostrud ipsum non reprehenderit fugiat incididunt. Ullamco dolor cupidatat
-		dolore et cupidatat adipisicing culpa elit. Elit aliquip occaecat ex ea aliqua voluptate est id.
-	</p>
+	<h2>{@html t("home", "title")}</h2>
+	<p>{@html t("home", "p1")}</p>
 	<div class="flex items-center justify-center gap-4">
 		<button class="cursor-pointer border px-2 py-1" onclick={() => i18n.setLang("en")}
 			>{@html t("home", "swap_to_en")}</button
@@ -20,11 +17,5 @@
 			>{@html t("home", "swap_to_fr")}</button
 		>
 	</div>
-	<p>
-		Non nulla dolor sint excepteur laborum qui. Aliquip in est excepteur deserunt elit ad et
-		deserunt. Adipisicing veniam sit magna dolor exercitation aute nisi eu irure sit. Commodo
-		aliquip irure ullamco proident cupidatat veniam sint occaecat exercitation reprehenderit
-		pariatur enim occaecat. Ea irure in qui elit veniam ut enim ad Lorem consequat. Nulla pariatur
-		pariatur reprehenderit id do Lorem do.
-	</p>
+	<p>{@html t("home", "p2")}</p>
 </main>

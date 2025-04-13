@@ -52,7 +52,8 @@ export const POST = async ({ request }) => {
 
 	const values: (typeof schema.translations.$inferInsert)[] = []
 	for (const [lang, value] of Object.entries(langs)) {
-		if (typeof value != "string" || !value) throw error(400, "auto-i18n.error_bad_langs")
+		if (typeof value != "string") throw error(400, "auto-i18n.error_bad_langs")
+		if (!value) continue
 		values.push({ lang, category, key, value })
 	}
 

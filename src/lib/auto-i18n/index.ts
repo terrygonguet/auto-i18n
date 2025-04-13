@@ -53,7 +53,7 @@ export class AutoI18N {
 		this.#supportedLangs = Array.isArray(supportedLangs) ? supportedLangs : supportedLangs()
 		this.#fallbackLang = typeof fallbackLang == "string" ? fallbackLang : fallbackLang()
 		if (!this.#supportedLangs.includes(this.#fallbackLang))
-			console.warn("The auto-i18n fallback language is not in the list of supported languages", {
+			console.warn("[auto-i18n] The fallback language is not in the list of supported languages", {
 				fallbackLang: this.#fallbackLang,
 				supportedLangs: this.#supportedLangs,
 			})
@@ -103,7 +103,7 @@ export class AutoI18N {
 		this.#inFlight.delete(cacheKey)
 
 		if (err) {
-			console.error("Failed to load translations", { category, lang }, err)
+			console.error("[auto-i18n] Failed to load translations", { category, lang }, err)
 			this.#failedCategories.add(cacheKey)
 		} else {
 			this.#loadedCategories.add(category)
@@ -123,7 +123,8 @@ export class AutoI18N {
 			.andThen((res) => res.json())
 			.asTuple()
 		this.#inFlight.delete("all")
-		if (err) console.error("Failed to load all translations", err)
+		if (err)
+			console.error("[auto-i18n] Failed to load all translations", { categories, langs }, err)
 
 		for (const [lang, categories] of Object.entries<any>(data)) {
 			for (const [category, keys] of Object.entries<any>(categories)) {
@@ -184,18 +185,40 @@ export class AutoI18N {
 	}
 
 	interpolate(text: string, values: Record<string, TValue>) {
-		let istart = 0
-		let iend = 0
-		while ((istart = text.indexOf("{{", istart)) != -1) {
-			iend = text.indexOf("}}", istart)
-			if (iend == -1) break
-			const expr = text.slice(istart + 2, iend)
-			let value = values[expr] ?? ""
-			if (typeof value == "object")
-				value = (value.prefix ?? "") + value.visible + (value.suffix ?? "")
-			text = text.slice(0, istart) + value + text.slice(iend + 2)
+		let start = 0
+		let end = 0
+		let lastEnd = 0
+		let result = ""
+		while ((start = text.indexOf("{{", lastEnd)) != -1) {
+			end = text.indexOf("}}", start)
+			if (end == -1) break
+			let value = ""
+			const expr = text.slice(start + 2, end)
+			if (expr.startsWith("$t")) {
+				const parts = expr.split(/\s+/)
+				if (parts.length < 3 || parts.length > 4) {
+					console.error("[auto-i18n] Failed to interpolate $t: invalid number of values", {
+						expression: expr,
+					})
+					value = "I18N_INTERPOLATE_ERROR"
+				} else {
+					const [, category, key, lang = this.#lang] = parts
+					value = this.t(category, key, { autoload: false, editor: false, values, lang })
+				}
+			} else {
+				const tvalue = values[expr.trim()]
+				if (typeof tvalue == "object")
+					value = (tvalue.prefix ?? "") + tvalue.visible + (tvalue.suffix ?? "")
+				else if (typeof tvalue == "string") value = tvalue
+				else {
+					console.warn("[auto-i18n] Tried to interpolate missing value", { expression: expr })
+					value = ""
+				}
+			}
+			result += text.slice(lastEnd, start) + value
+			lastEnd = end + 2
 		}
-		return text
+		return result + text.slice(lastEnd)
 	}
 
 	withDefaults(defaultOpts: TOptions): typeof this.t {
