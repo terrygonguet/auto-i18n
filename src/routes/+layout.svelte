@@ -10,7 +10,7 @@
 	function onKeydown(evt: KeyboardEvent) {
 		if (evt.code == "Backslash" && evt.ctrlKey && evt.shiftKey) {
 			if (i18n.isEditorShown) i18n.hideEditor()
-			else i18n.showEditor({ autoload: true })
+			else i18n.showEditor()
 		}
 	}
 </script>

@@ -6,7 +6,11 @@ const config = {
 	preprocess: vitePreprocess(),
 	kit: {
 		adapter: adapter(),
-		alias: { "$routes/*": ".svelte-kit/types/src/routes/*", "$$/*": "src/*" },
+		alias: {
+			"$routes/*": ".svelte-kit/types/src/routes/*",
+			"$$/routes/*": "src/routes/*",
+			"$$/styles.css": "src/styles.css",
+		},
 	},
 }
 
