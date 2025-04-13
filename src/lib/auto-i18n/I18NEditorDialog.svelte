@@ -109,12 +109,12 @@
 
 <svelte:window bind:scrollY />
 
-<div class="pointer-events-none fixed inset-0 z-50 border-2 border-teal-500"></div>
+<div class="pointer-events-none fixed inset-0 z-50 border-8 border-teal-500"></div>
 
 <dialog
 	bind:this={dialogEl}
 	style:transform
-	class="bg-tea absolute top-0 left-0 border border-teal-300 shadow backdrop:bg-transparent"
+	class="bg-tea absolute top-0 left-0 border border-teal-300 shadow backdrop:bg-teal-50/50"
 	onclick={onDialogClick}
 >
 	<form class="flex w-min flex-col gap-4 p-4" onsubmit={onSubmit}>
