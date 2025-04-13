@@ -1,4 +1,4 @@
-import type { AutoI18N, TOptions, TValue } from "$lib/auto-i18n"
+import type { AutoI18N, TOptions } from "$lib/auto-i18n"
 import I18NEditorDialog, {
 	type EditorCloseRadio,
 	type EditorOpenRadio,

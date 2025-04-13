@@ -138,7 +138,12 @@ export class AutoI18N {
 	}
 
 	async setLang(lang: string) {
-		await this.loadAll({ categories: Array.from(this.#loadedCategories), langs: [lang] })
+		if (this.#lang == lang) return
+		const toLoad: string[] = []
+		for (const category of this.#loadedCategories) {
+			if (!this.#cache.has(lang + "." + category)) toLoad.push(category)
+		}
+		if (toLoad.length > 0) await this.loadAll({ categories: toLoad, langs: [lang] })
 		this.#lang = lang
 		this.#langChange()
 	}
@@ -231,10 +236,7 @@ export class AutoI18N {
 				if (typeof tvalue == "object")
 					value = (tvalue.prefix ?? "") + tvalue.visible + (tvalue.suffix ?? "")
 				else if (typeof tvalue == "string") value = tvalue
-				else {
-					console.warn("[auto-i18n] Tried to interpolate missing value", { expression: expr })
-					value = ""
-				}
+				else console.warn("[auto-i18n] Tried to interpolate missing value", { expression: expr })
 			}
 			result += text.slice(lastEnd, start) + value
 			lastEnd = end + 2
