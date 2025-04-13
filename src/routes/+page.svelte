@@ -18,4 +18,10 @@
 		>
 	</div>
 	<p>{@html t("home", "p2")}</p>
+	<ul>
+		<li>{@html t("home", "li", { values: { count: 0 } })}</li>
+		<li>{@html t("home", "li", { values: { count: 1 } })}</li>
+		<li>{@html t("home", "li", { values: { count: 2 } })}</li>
+		<li>{@html t("home", "li", { values: { count: 3 } })}</li>
+	</ul>
 </main>

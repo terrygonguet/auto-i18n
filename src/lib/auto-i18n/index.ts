@@ -15,7 +15,7 @@ export interface TOptions {
 	editor?: boolean
 	lang?: string
 	overrideMissing?: string
-	values?: Record<string, TValue>
+	values?: { [name: string]: TValue | undefined; count?: number }
 }
 
 export type TValue =
@@ -184,7 +184,7 @@ export class AutoI18N {
 		return text
 	}
 
-	interpolate(text: string, values: Record<string, TValue>) {
+	interpolate(text: string, values: NonNullable<TOptions["values"]>) {
 		let start = 0
 		let end = 0
 		let lastEnd = 0
@@ -204,6 +204,27 @@ export class AutoI18N {
 				} else {
 					const [, category, key, lang = this.#lang] = parts
 					value = this.t(category, key, { autoload: false, editor: false, values, lang })
+				}
+			} else if (expr.startsWith("$count")) {
+				if (values.count == undefined)
+					console.warn("[auto-i18n] Tried to interpolate a $count without a count value")
+				else {
+					const matches = Array.from(expr.matchAll(/(?<amount>[\dn]):/g))
+					const rules: { [amount: string]: string } = {}
+					for (let i = 0; i < matches.length; i++) {
+						const { 0: match, groups, index } = matches[i]
+						const { amount } = groups!
+						const start = index + match.length
+						const end = matches[i + 1]?.index
+						const rule = expr.slice(start, end)
+						rules[amount] = rule.trim()
+					}
+
+					const val = rules[values.count] ?? rules.n
+					if (!val)
+						console.warn("[auto-i18n] Tried to interpolate a $count without a default case (n:)")
+
+					value = val ?? ""
 				}
 			} else {
 				const tvalue = values[expr.trim()]

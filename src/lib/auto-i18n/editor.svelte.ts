@@ -1,4 +1,4 @@
-import type { AutoI18N, TValue } from "$lib/auto-i18n"
+import type { AutoI18N, TOptions, TValue } from "$lib/auto-i18n"
 import I18NEditorDialog, {
 	type EditorCloseRadio,
 	type EditorOpenRadio,
@@ -52,7 +52,7 @@ export class AutoI18NEditor {
 		}
 	}
 
-	render(text: string, category: string, key: string, values: Record<string, TValue>) {
+	render(text: string, category: string, key: string, values: NonNullable<TOptions["values"]>) {
 		return html`<span
 			class="i18n-fragment"
 			data-i18n-category="${category}"
