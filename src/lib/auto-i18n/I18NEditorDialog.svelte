@@ -5,7 +5,7 @@
 					type: "translation"
 					category: string
 					key: string
-					values: Record<string, TValue>
+					values: NonNullable<TOptions["values"]>
 					anchorEl?: HTMLElement
 			  }
 			| { type: "content"; url?: string },
@@ -25,26 +25,28 @@
 <script lang="ts">
 	import { getContext, tick, untrack } from "svelte"
 	import type { Radio } from "$lib/radio"
-	import { type TOptions, type AutoI18N, type TValue } from "$lib/auto-i18n"
+	import { type TOptions, type AutoI18N } from "$lib/auto-i18n"
 	import { safe } from "@terrygonguet/utils/result"
 
 	let { autoload = false, open, close, onChange }: Props = $props()
 
-	let mode = $state<"translation" | "content">("translation")
-	let category = $state("")
-	let key = $state("")
-	let values = $state<NonNullable<TOptions["values"]>>({})
-	let anchorEl = $state<HTMLElement>()
-	let url = $state<string>()
-
 	let i18n = getContext<AutoI18N>("i18n")
 	let t = $derived(i18n.withDefaults({ editor: false, autoload }))
 
-	let scrollY = $state(0)
+	type Mode =
+		| {
+				type: "translation"
+				category: string
+				key: string
+				values: NonNullable<TOptions["values"]>
+		  }
+		| { type: "content"; url?: string }
 
-	let hasValues = $derived(Object.keys(values).length > 0)
-
+	let mode = $state<Mode>({ type: "content" })
 	let dialogEl = $state<HTMLDialogElement>()!
+
+	let anchorEl = $state<HTMLElement>()
+	let scrollY = $state(0)
 	let targetRect = $derived(
 		anchorEl
 			? getChildrenBoundingRect(anchorEl)
@@ -69,16 +71,17 @@
 		open((args) => {
 			switch (args.type) {
 				case "translation":
-					mode = "translation"
-					category = args.category
-					key = args.key
-					values = args.values
 					anchorEl = args.anchorEl
+					mode = {
+						type: "translation",
+						category: args.category,
+						key: args.key,
+						values: args.values,
+					}
 					tick().then(() => dialogEl.showModal())
 					break
 				case "content":
-					mode = "content"
-					url = args.url
+					mode = { type: "content", url: args.url }
 					tick().then(() => dialogEl.showModal())
 					break
 			}
@@ -138,7 +141,9 @@
 	class="bg-tea absolute top-0 left-0 border border-teal-300 shadow backdrop:bg-teal-50/50"
 	onclick={onDialogClick}
 >
-	{#if mode == "translation"}
+	{#if mode.type == "translation"}
+		{@const { category, key, values } = mode}
+		{@const hasValues = Object.keys(values).length > 0}
 		<form class="flex w-min flex-col gap-4 p-4" onsubmit={onSubmit}>
 			<p class="text-center text-xl">
 				<code class="rounded bg-teal-100 px-2 py-1">{category}.{key}</code>
@@ -195,7 +200,8 @@
 				{t("auto-i18n", "btn_save", { overrideMissing: "Save" })}
 			</button>
 		</form>
-	{:else if mode == "content"}
+	{:else if mode.type == "content"}
+		{@const { url } = mode}
 		<div class="flex max-w-prose flex-col gap-4 p-4">
 			<p>
 				{@html t("auto-i18n", "external_content", {
