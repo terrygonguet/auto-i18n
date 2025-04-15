@@ -6,6 +6,10 @@
 	scroll-behavior: smooth;
 }
 
+:focus:not(:focus-visible) {
+	outline: none;
+}
+
 html {
 	height: 100dvh;
 	width: 100%;

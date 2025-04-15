@@ -1,6 +1,6 @@
 import { safe } from "@terrygonguet/utils/result"
 import { createSubscriber } from "svelte/reactivity"
-import type { AutoI18NEditor } from "$lib/auto-i18n/editor.svelte"
+import type { AutoI18NEditor, AutoI18NEditorConfig } from "$lib/auto-i18n/editor.svelte"
 
 export interface AutoI18NConstructorOptions {
 	lang: string | (() => string)
@@ -12,7 +12,7 @@ export interface AutoI18NConstructorOptions {
 
 export interface TOptions {
 	autoload?: boolean
-	editor?: boolean
+	editor?: boolean | AutoI18NEditorConfig
 	lang?: string
 	overrideMissing?: string
 	values?: { [name: string]: TValue | undefined; count?: number }
@@ -185,7 +185,13 @@ export class AutoI18N {
 		} else text = this.interpolate(text, values, options)
 
 		return this.#editor && editor
-			? this.#editor.renderTranslation(text, category, key, values)
+			? this.#editor.renderTranslation(
+					text,
+					category,
+					key,
+					values,
+					typeof editor == "object" ? editor : undefined,
+				)
 			: text
 	}
 

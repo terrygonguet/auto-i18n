@@ -11,6 +11,10 @@ import { safeParse } from "@terrygonguet/utils/json"
 
 const html = String.raw
 
+export interface AutoI18NEditorConfig {
+	multiline?: boolean
+}
+
 export class AutoI18NEditor {
 	i18n: AutoI18N
 
@@ -61,6 +65,7 @@ export class AutoI18NEditor {
 		category: string,
 		key: string,
 		values: NonNullable<TOptions["values"]>,
+		{ multiline = false }: AutoI18NEditorConfig = {},
 	) {
 		return html`<div
 			class="i18n-fragment"
@@ -68,6 +73,7 @@ export class AutoI18NEditor {
 			data-i18n-category="${category}"
 			data-i18n-key="${key}"
 			data-i18n-values="${encodeURIComponent(JSON.stringify(values))}"
+			${multiline ? "data-i18n-multiline" : ""}
 		>
 			${text}
 		</div>`
@@ -90,11 +96,13 @@ export class AutoI18NEditor {
 			i18nKey: key,
 			i18nValues,
 			i18nUrl: url,
+			i18nMultiline,
 		} = anchorEl.dataset as Record<string, string>
 		switch (type) {
 			case "translation":
 				const values = safeParse(decodeURIComponent(i18nValues), {})
-				this.#dialogOpenRadio.emitter({ type, category, key, values, anchorEl })
+				const multiline = typeof i18nMultiline == "string"
+				this.#dialogOpenRadio.emitter({ type, category, key, values, multiline, anchorEl })
 				break
 			case "content":
 				this.#dialogOpenRadio.emitter({ type, url })

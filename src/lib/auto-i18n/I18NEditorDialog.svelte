@@ -6,6 +6,7 @@
 					category: string
 					key: string
 					values: NonNullable<TOptions["values"]>
+					multiline: boolean
 					anchorEl?: HTMLElement
 			  }
 			| { type: "content"; url?: string },
@@ -39,6 +40,7 @@
 				category: string
 				key: string
 				values: NonNullable<TOptions["values"]>
+				multiline?: { selected: string }
 		  }
 		| { type: "content"; url?: string }
 
@@ -77,6 +79,7 @@
 						category: args.category,
 						key: args.key,
 						values: args.values,
+						multiline: args.multiline ? { selected: i18n.lang } : undefined,
 					}
 					tick().then(() => dialogEl.showModal())
 					break
@@ -129,6 +132,15 @@
 	function onDialogClick(evt: Event) {
 		if (evt.target == evt.currentTarget) dialogEl.close()
 	}
+
+	function onLabelClick(multiline: { selected: string }, lang: string) {
+		return function () {
+			multiline.selected = lang
+			tick().then(() =>
+				document.querySelector<HTMLTextAreaElement>("#i18n-editor-value-" + lang)?.focus(),
+			)
+		}
+	}
 </script>
 
 <svelte:window bind:scrollY />
@@ -142,9 +154,9 @@
 	onclick={onDialogClick}
 >
 	{#if mode.type == "translation"}
-		{@const { category, key, values } = mode}
+		{@const { category, key, values, multiline } = mode}
 		{@const hasValues = Object.keys(values).length > 0}
-		<form class="flex w-min flex-col gap-4 p-4" onsubmit={onSubmit}>
+		<form class="flex min-w-md flex-col gap-4 p-4" onsubmit={onSubmit}>
 			<p class="text-center text-xl">
 				<code class="rounded bg-teal-100 px-2 py-1">{category}.{key}</code>
 			</p>
@@ -166,33 +178,71 @@
 				</div>
 			{/if}
 
-			<div class="grid min-w-md grid-cols-[auto_1fr_auto] gap-2">
-				{#if hasValues}
-					<p class="col-span-3 text-center underline decoration-teal-300">
-						{t("auto-i18n", "title_translations", { overrideMissing: "Translations" })}
-					</p>
-				{/if}
-				{#each i18n.supportedLangs as lang}
-					<label for="i18n-editor-value-{lang}"><code>{lang}</code></label>
-					<input
-						id="i18-editor-value-{lang}"
-						name={lang}
-						class="border-b border-teal-300 px-1 font-mono"
-						value={i18n.raw(category, key, { lang })}
-						placeholder={t("auto-i18n", "value_placeholder", { overrideMissing: "Missing value" })}
-					/>
-					<div class="flex items-center gap-2 text-sm">
-						{#if lang == i18n.lang}
-							{@const label = t("auto-i18n", "lang_current", { overrideMissing: "Current" })}
-							<span class="text-teal-700" title={label}>{label.charAt(0)}</span>
-						{/if}
-						{#if lang == i18n.fallbackLang}
-							{@const label = t("auto-i18n", "lang_fallback", { overrideMissing: "Fallback" })}
-							<span class="text-indigo-700" title={label}>{label.charAt(0)}</span>
-						{/if}
+			{#if multiline}
+				<div>
+					{#if hasValues}
+						<p class="col-span-3 text-center underline decoration-teal-300">
+							{t("auto-i18n", "title_translations", { overrideMissing: "Translations" })}
+						</p>
+					{/if}
+					<div class="grid">
+						<div class="flex">
+							{#each i18n.supportedLangs as lang}
+								<button
+									type="button"
+									id="i18n-editor-label-{lang}"
+									data-selected={lang == multiline.selected}
+									class="border border-r-0 px-2 py-1 data-[selected=true]:border-b-0"
+									onclick={onLabelClick(multiline, lang)}
+								>
+									<code>{lang}</code>
+									{@render langIndicators(i18n, t, lang)}
+								</button>
+							{/each}
+							<div class="flex-1 border-b border-l"></div>
+						</div>
+						{#each i18n.supportedLangs as lang}
+							{@const placeholder = t("auto-i18n", "value_placeholder", {
+								overrideMissing: "Missing value",
+							})}
+							<textarea
+								name={lang}
+								id="i18n-editor-value-{lang}"
+								aria-labelledby="i18n-editor-label-{lang}"
+								data-selected={lang == multiline.selected}
+								class="col-start-1 row-start-2 border border-t-0 p-3 font-mono outline-none data-[selected=false]:hidden"
+								autofocus
+								rows="5"
+								{placeholder}>{i18n.raw(category, key, { lang })}</textarea
+							>
+						{/each}
 					</div>
-				{/each}
-			</div>
+				</div>
+			{:else}
+				<div class="grid grid-cols-[auto_1fr_auto] gap-2">
+					{#if hasValues}
+						<p class="col-span-3 text-center underline decoration-teal-300">
+							{t("auto-i18n", "title_translations", { overrideMissing: "Translations" })}
+						</p>
+					{/if}
+					{#each i18n.supportedLangs as lang}
+						<label for="i18n-editor-value-{lang}"><code>{lang}</code></label>
+						<input
+							id="i18-editor-value-{lang}"
+							name={lang}
+							class="border-b border-teal-300 px-1 font-mono"
+							value={i18n.raw(category, key, { lang })}
+							placeholder={t("auto-i18n", "value_placeholder", {
+								overrideMissing: "Missing value",
+							})}
+						/>
+						<div class="flex items-center gap-2 text-sm">
+							{@render langIndicators(i18n, t, lang)}
+						</div>
+					{/each}
+				</div>
+			{/if}
+
 			<button
 				type="submit"
 				class="mx-auto block cursor-pointer border border-teal-500 bg-teal-100 px-2 transition-colors hover:bg-teal-50"
@@ -218,6 +268,17 @@
 		</div>
 	{/if}
 </dialog>
+
+{#snippet langIndicators(i18n: AutoI18N, t: AutoI18N["t"], lang: string)}
+	{#if lang == i18n.lang}
+		{@const label = t("auto-i18n", "lang_current", { overrideMissing: "Current" })}
+		<span class="text-teal-700" title={label}>{label.charAt(0)}</span>
+	{/if}
+	{#if lang == i18n.fallbackLang}
+		{@const label = t("auto-i18n", "lang_fallback", { overrideMissing: "Fallback" })}
+		<span class="text-indigo-700" title={label}>{label.charAt(0)}</span>
+	{/if}
+{/snippet}
 
 <style>
 	:global(.i18n-fragment) {

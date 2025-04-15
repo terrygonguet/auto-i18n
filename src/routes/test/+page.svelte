@@ -8,5 +8,7 @@
 </script>
 
 <main in:fade={fadeParams.in} out:fade={fadeParams.out} class="prose mx-auto my-12">
-	{@html i18n.c(content, { url: "https://i18n.localhost/docs" })}
+	{@html i18n.c(content, {
+		url: "https://github.com/terrygonguet/auto-i18n/blob/main/src/routes/test/content.html",
+	})}
 </main>
