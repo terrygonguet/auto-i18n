@@ -12,6 +12,9 @@ const config = {
 			"$$/styles.css": "src/styles.css",
 		},
 	},
+	compilerOptions: {
+		warningFilter: (warning) => warning.code != "a11y_autofocus",
+	},
 }
 
 export default config
