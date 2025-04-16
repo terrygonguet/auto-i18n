@@ -1,6 +1,6 @@
 import { safe } from "@terrygonguet/utils/result"
 import { createSubscriber } from "svelte/reactivity"
-import type { AutoI18NEditor, AutoI18NEditorConfig } from "$lib/auto-i18n/editor.svelte"
+import type { AutoI18NEditor, AutoI18NEditorConfig } from "./editor.svelte"
 
 export interface AutoI18NConstructorOptions {
 	lang: string | (() => string)
@@ -98,7 +98,7 @@ export class AutoI18N {
 			return
 
 		this.#inFlight.add(cacheKey)
-		const [err, data] = await safe(this.fetch(`/locale/${lang}/${category}.json`))
+		const [err, data] = await safe(() => this.fetch(`/locale/${lang}/${category}.json`))
 			.andThen(async (res) => ({ ok: res.ok, data: await res.json() }))
 			.andThen(({ ok, data }) => {
 				if (!ok) throw new Error(data.message)
@@ -124,7 +124,7 @@ export class AutoI18N {
 
 		this.#inFlight.add("all")
 		const url = "/locale/all.json" + (search.size ? "?" + search : "")
-		const [err, data] = await safe(this.fetch(url))
+		const [err, data] = await safe(() => this.fetch(url))
 			.andThen((res) => res.json())
 			.asTuple()
 		this.#inFlight.delete("all")
@@ -288,7 +288,7 @@ export class AutoI18N {
 
 	async showEditor({ autoload = false } = {}) {
 		if (!this.#editor) {
-			const { AutoI18NEditor } = await import("$lib/auto-i18n/editor.svelte")
+			const { AutoI18NEditor } = await import("./editor.svelte")
 			this.#editor = new AutoI18NEditor(this, { autoload })
 			this.#editorChange()
 		}

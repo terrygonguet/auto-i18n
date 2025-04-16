@@ -25,8 +25,8 @@
 
 <script lang="ts">
 	import { getContext, tick, untrack } from "svelte"
-	import type { Radio } from "$lib/radio"
-	import { type TOptions, type AutoI18N } from "$lib/auto-i18n"
+	import type { Radio } from "./radio.js"
+	import { type TOptions, type AutoI18N } from "./index.js"
 	import { safe } from "@terrygonguet/utils/result"
 
 	let { autoload = false, open, close, onChange }: Props = $props()
@@ -145,33 +145,26 @@
 
 <svelte:window bind:scrollY />
 
-<div class="pointer-events-none fixed inset-0 z-50 border-8 border-teal-500"></div>
+<div id="i18n-editor-on-sign"></div>
 
-<dialog
-	bind:this={dialogEl}
-	style:transform
-	class="bg-tea absolute top-0 left-0 border border-teal-300 shadow backdrop:bg-teal-50/50"
-	onclick={onDialogClick}
->
+<dialog bind:this={dialogEl} id="i18n-editor" style:transform onclick={onDialogClick}>
 	{#if mode.type == "translation"}
 		{@const { category, key, values, multiline } = mode}
 		{@const hasValues = Object.keys(values).length > 0}
-		<form class="flex min-w-md flex-col gap-4 p-4" onsubmit={onSubmit}>
-			<p class="text-center text-xl">
-				<code class="rounded bg-teal-100 px-2 py-1">{category}.{key}</code>
-			</p>
+		<form onsubmit={onSubmit}>
+			<p id="i18n-editor-title"><code>{category}.{key}</code></p>
 			<input name="category" value={category} type="hidden" required />
 			<input name="key" value={key} type="hidden" required />
 
 			{#if hasValues}
-				<div class="grid w-full grid-cols-[auto_auto_1fr] gap-2">
-					<p class="col-span-3 text-center underline decoration-teal-300">
+				<div id="i18n-editor-values">
+					<p class="i18n-editor-subtitle">
 						{t("auto-i18n", "title_values", { overrideMissing: "Values" })}
 					</p>
 					{#each Object.entries(values) as [name, value]}
-						<code class="text-end">{"{{" + name + "}}"}</code>
+						<code class="i18n-editor-values-name">{"{{" + name + "}}"}</code>
 						<span>:</span>
-						<span class="overflow-hidden overflow-ellipsis whitespace-nowrap">
+						<span class="i18n-editor-values-value">
 							{typeof value == "object" ? value.visible : value}
 						</span>
 					{/each}
@@ -181,36 +174,37 @@
 			{#if multiline}
 				<div>
 					{#if hasValues}
-						<p class="col-span-3 text-center underline decoration-teal-300">
+						<p class="i18n-editor-subtitle">
 							{t("auto-i18n", "title_translations", { overrideMissing: "Translations" })}
 						</p>
 					{/if}
-					<div class="grid">
-						<div class="flex">
+					<div id="i18n-editor-multiline">
+						<div id="i18n-editor-multiline-tabs">
 							{#each i18n.supportedLangs as lang}
 								<button
 									type="button"
 									id="i18n-editor-label-{lang}"
+									class="i18n-editor-multiline-tab"
 									data-selected={lang == multiline.selected}
-									class="border border-r-0 px-2 py-1 data-[selected=true]:border-b-0"
 									onclick={onLabelClick(multiline, lang)}
 								>
 									<code>{lang}</code>
 									{@render langIndicators(i18n, t, lang)}
 								</button>
 							{/each}
-							<div class="flex-1 border-b border-l"></div>
+							<div id="i18n-editor-multiline-tabend"></div>
 						</div>
 						{#each i18n.supportedLangs as lang}
 							{@const placeholder = t("auto-i18n", "value_placeholder", {
 								overrideMissing: "Missing value",
 							})}
+							<!-- svelte-ignore a11y_autofocus -->
 							<textarea
 								name={lang}
 								id="i18n-editor-value-{lang}"
+								class="i18n-editor-multiline-value"
 								aria-labelledby="i18n-editor-label-{lang}"
 								data-selected={lang == multiline.selected}
-								class="col-start-1 row-start-2 border border-t-0 p-3 font-mono outline-none data-[selected=false]:hidden"
 								autofocus
 								rows="5"
 								{placeholder}>{i18n.raw(category, key, { lang })}</textarea
@@ -219,9 +213,9 @@
 					</div>
 				</div>
 			{:else}
-				<div class="grid grid-cols-[auto_1fr_auto] gap-2">
+				<div id="i18n-editor-monoline">
 					{#if hasValues}
-						<p class="col-span-3 text-center underline decoration-teal-300">
+						<p class="i18n-editor-subtitle">
 							{t("auto-i18n", "title_translations", { overrideMissing: "Translations" })}
 						</p>
 					{/if}
@@ -229,38 +223,33 @@
 						<label for="i18n-editor-value-{lang}"><code>{lang}</code></label>
 						<input
 							id="i18-editor-value-{lang}"
+							class="i18n-editor-monoline-value"
 							name={lang}
-							class="border-b border-teal-300 px-1 font-mono"
 							value={i18n.raw(category, key, { lang })}
 							placeholder={t("auto-i18n", "value_placeholder", {
 								overrideMissing: "Missing value",
 							})}
 						/>
-						<div class="flex items-center gap-2 text-sm">
-							{@render langIndicators(i18n, t, lang)}
-						</div>
+						<div id="i18n-editor-monoline-indicators">{@render langIndicators(i18n, t, lang)}</div>
 					{/each}
 				</div>
 			{/if}
 
-			<button
-				type="submit"
-				class="mx-auto block cursor-pointer border border-teal-500 bg-teal-100 px-2 transition-colors hover:bg-teal-50"
-			>
+			<button type="submit" id="i18n-editor-save">
 				{t("auto-i18n", "btn_save", { overrideMissing: "Save" })}
 			</button>
 		</form>
 	{:else if mode.type == "content"}
 		{@const { url } = mode}
-		<div class="flex max-w-prose flex-col gap-4 p-4">
+		<div id="i18n-editor-content">
 			<p>
 				{@html t("auto-i18n", "external_content", {
 					overrideMissing: "This text is external content not managed by Auto-i18n.",
 				})}
 			</p>
 			{#if url}
-				<p class="text-center">
-					<a href={url} target="_blank" class="text-teal-700 underline">
+				<p id="i18n-editor-content-url">
+					<a href={url} target="_blank">
 						{@html t("auto-i18n", "content_url", { overrideMissing: "View content" })}
 					</a>
 				</p>
@@ -272,16 +261,186 @@
 {#snippet langIndicators(i18n: AutoI18N, t: AutoI18N["t"], lang: string)}
 	{#if lang == i18n.lang}
 		{@const label = t("auto-i18n", "lang_current", { overrideMissing: "Current" })}
-		<span class="text-teal-700" title={label}>{label.charAt(0)}</span>
+		<span class="i18n-editor-indicator-cur" title={label}>{label.charAt(0)}</span>
 	{/if}
 	{#if lang == i18n.fallbackLang}
 		{@const label = t("auto-i18n", "lang_fallback", { overrideMissing: "Fallback" })}
-		<span class="text-indigo-700" title={label}>{label.charAt(0)}</span>
+		<span class="i18n-editor-indicator-fb" title={label}>{label.charAt(0)}</span>
 	{/if}
 {/snippet}
 
 <style>
 	:global(.i18n-fragment) {
 		display: contents;
+	}
+
+	#i18n-editor-on-sign {
+		--i18n-editor-sign-border-color: oklch(70.4% 0.14 182.503);
+		--i18n-editor-sign-border-width: 8px;
+
+		pointer-events: none;
+		position: fixed;
+		inset: 0;
+		z-index: 50;
+		border: var(--i18n-editor-sign-border-width) solid var(--i18n-editor-sign-border-color);
+	}
+
+	dialog#i18n-editor {
+		--i18n-editor-dialog-border-color: oklch(85.5% 0.138 181.071);
+		--i18n-editor-dialog-backdrop: oklch(98.4% 0.014 180.72 / 50%);
+		--i18n-editor-title-bg: oklch(95.3% 0.051 180.801);
+		--i18n-editor-save-bg: oklch(95.3% 0.051 180.801);
+		--i18n-editor-save-bg-hover: oklch(98.4% 0.014 180.72);
+		--i18n-editor-content-url-color: oklch(51.1% 0.096 186.391);
+		--i18n-editor-indicator-current: oklch(51.1% 0.096 186.391);
+		--i18n-editor-indicator-fallback: oklch(45.7% 0.24 277.023);
+		--i18n-editor-font-mono:
+			ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
+			monospace;
+
+		position: absolute;
+		top: 0;
+		left: 0;
+		border: 1px solid var(--i18n-editor-dialog-border-color);
+	}
+	dialog#i18n-editor::backdrop {
+		background-color: var(--i18n-editor-dialog-backdrop);
+	}
+
+	dialog#i18n-editor > form {
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+		padding: 1rem;
+		min-width: 28rem;
+	}
+
+	#i18n-editor-title {
+		text-align: center;
+		font-size: 1.25rem;
+
+		> code {
+			border-radius: 0.25rem;
+			padding: 0.25rem 0.5rem;
+			background-color: var(--i18n-editor-title-bg);
+		}
+	}
+
+	.i18n-editor-subtitle {
+		grid-column: span 3;
+		text-align: center;
+		text-decoration: underline;
+		text-decoration-color: var(--i18n-editor-dialog-border-color);
+	}
+
+	#i18n-editor-values {
+		display: grid;
+		grid-template-columns: auto auto 1fr;
+		gap: 0.5rem;
+		width: 100%;
+	}
+	.i18n-editor-values-name {
+		text-align: end;
+	}
+	.i18n-editor-values-value {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	#i18n-editor-multiline {
+		display: grid;
+	}
+	#i18n-editor-multiline-tabs {
+		display: flex;
+	}
+
+	.i18n-editor-multiline-tab {
+		border: 1px solid var(--i18n-editor-dialog-border-color);
+		border-inline-end: 0;
+		padding: 0.25rem 0.5rem;
+
+		&[data-selected="true"] {
+			border-block-end: 0;
+		}
+	}
+
+	#i18n-editor-multiline-tabend {
+		flex: 1;
+		border: 1px solid var(--i18n-editor-dialog-border-color);
+		border-block-start: 0;
+		border-inline-end: 0;
+	}
+
+	.i18n-editor-multiline-value {
+		padding: 0.75rem;
+		grid-column: 1;
+		grid-row: 2;
+		font-family: var(--i18n-editor-font-mono);
+		border: 1px solid var(--i18n-editor-dialog-border-color);
+		border-block-start: 0;
+		outline: none;
+
+		&[data-selected="false"] {
+			display: none;
+		}
+	}
+
+	#i18n-editor-monoline {
+		display: grid;
+		grid-template-columns: auto 1fr auto;
+		gap: 0.5rem;
+	}
+
+	.i18n-editor-monoline-value {
+		padding-inline: 0.25rem;
+		border-block-end: 1px solid var(--i18n-editor-dialog-border-color);
+		font-family: var(--i18n-editor-font-mono);
+	}
+
+	#i18n-editor-monoline-indicators {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	#i18n-editor-save {
+		display: block;
+		padding-inline: 0.5rem;
+		margin-inline: auto;
+		cursor: pointer;
+		border: 1px solid var(--i18n-editor-dialog-border-color);
+		background-color: var(--i18n-editor-save-bg);
+		transition: background-color 0.15s ease-in-out;
+
+		&:is(:hover, :active) {
+			background-color: var(--i18n-editor-save-bg-hover);
+		}
+	}
+
+	#i18n-editor-content {
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+		padding: 1rem;
+		max-width: 65ch;
+	}
+
+	#i18n-editor-content-url {
+		text-align: center;
+
+		> a {
+			color: var(--i18n-editor-content-url-color);
+			text-decoration: underline;
+		}
+	}
+
+	.i18n-editor-indicator-cur {
+		color: var(--i18n-editor-indicator-current);
+		font-size: 0.875rem;
+	}
+	.i18n-editor-indicator-fb {
+		color: var(--i18n-editor-indicator-fallback);
+		font-size: 0.875rem;
 	}
 </style>

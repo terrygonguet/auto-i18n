@@ -1,6 +1,6 @@
 // See https://svelte.dev/docs/kit/types#app.d.ts
 
-import type { AutoI18N } from "$lib/auto-i18n"
+import type { AutoI18N } from "auto-i18n"
 
 // for information about these interfaces
 declare global {

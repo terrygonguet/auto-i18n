@@ -1,13 +1,15 @@
-import type { AutoI18N, TOptions } from "$lib/auto-i18n"
+import type { AutoI18N, TOptions } from "./index.js"
 import I18NEditorDialog, {
 	type EditorCloseRadio,
 	type EditorOpenRadio,
-} from "$lib/auto-i18n/I18NEditorDialog.svelte"
+} from "./I18NEditorDialog.svelte"
 import { mount, unmount } from "svelte"
-import { createRadio } from "$lib/radio"
+import { createRadio } from "./radio.js"
 import { on } from "svelte/events"
 import { noop } from "@terrygonguet/utils"
 import { safeParse } from "@terrygonguet/utils/json"
+
+export { I18NEditorDialog }
 
 const html = String.raw
 
