@@ -1,0 +1,74 @@
+import { db, schema } from "$lib/server/db"
+import { createAutoI18NHandler, type CreateAutoI18NHandlerOptions } from "auto-i18n/server"
+import { and, inArray, sql } from "drizzle-orm"
+
+const fetchCategory: CreateAutoI18NHandlerOptions["fetchCategory"] = async ({
+	where: { lang, category },
+}) => {
+	const pairs = await db.query.translations.findMany({
+		columns: { key: true, value: true },
+		where: (table, { and, eq }) => and(eq(table.lang, lang), eq(table.category, category)),
+	})
+	if (pairs.length == 0) return undefined
+	else
+		return pairs.reduce(
+			(acc, { key, value }) => {
+				acc[key] = value
+				return acc
+			},
+			{} as Record<string, string>,
+		)
+}
+
+const fetchAll: CreateAutoI18NHandlerOptions["fetchAll"] = async ({
+	where: { langs, categories },
+}) => {
+	const langsWhere = langs?.length ? inArray(schema.translations.lang, langs) : undefined
+	const categoriesWhere = categories?.length
+		? inArray(schema.translations.category, categories)
+		: undefined
+	const where =
+		categoriesWhere && langsWhere
+			? and(categoriesWhere, langsWhere)
+			: (categoriesWhere ?? langsWhere)
+
+	const data = await db.query.translations.findMany({
+		where,
+		columns: { lang: true, category: true, key: true, value: true },
+	})
+
+	if (data.length == 0) return undefined
+
+	const obj: { [lang: string]: { [category: string]: { [key: string]: string } } } = {}
+	for (const { lang, category, key, value } of data) {
+		const objLang = obj[lang] ?? {}
+		obj[lang] = objLang
+		const objCategory = objLang[category] ?? {}
+		objLang[category] = objCategory
+		objCategory[key] = value
+	}
+
+	return obj
+}
+
+const update: CreateAutoI18NHandlerOptions["update"] = async ({ category, key, langs }) => {
+	const values: (typeof schema.translations.$inferInsert)[] = []
+	for (const [lang, value] of Object.entries(langs)) {
+		if (!value) continue
+		values.push({ lang, category, key, value })
+	}
+
+	db.insert(schema.translations)
+		.values(values)
+		.onConflictDoUpdate({
+			target: [schema.translations.lang, schema.translations.category, schema.translations.key],
+			set: { value: sql`excluded.value` },
+		})
+		.run()
+}
+
+export const i18nHandler = createAutoI18NHandler({
+	fetchCategory,
+	fetchAll,
+	update,
+})

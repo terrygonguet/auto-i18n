@@ -1,10 +1,4 @@
-import { createAutoI18NHandler } from "auto-i18n/server"
-
-const i18nHandler = createAutoI18NHandler({
-	fetchCategory: async () => void 0,
-	fetchAll: async () => void 0,
-	save: async () => void 0,
-})
+import { i18nHandler } from "$lib/server/i18n"
 
 export const handle = async ({ resolve, event }) => {
 	const i18nResult = await i18nHandler(event)
