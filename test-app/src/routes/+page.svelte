@@ -24,4 +24,18 @@
 		<li>{@html t("home", "li", { values: { count: 2 } })}</li>
 		<li>{@html t("home", "li", { values: { count: 3 } })}</li>
 	</ul>
+	<table>
+		<thead>
+			<tr>
+				<th><code>true</code></th>
+				<th><code>false</code></th>
+			</tr>
+		</thead>
+		<tbody>
+			<tr>
+				<td>{@html t("home", "if", { values: { condition: true } })}</td>
+				<td>{@html t("home", "if", { values: { condition: false } })}</td>
+			</tr>
+		</tbody>
+	</table>
 </main>

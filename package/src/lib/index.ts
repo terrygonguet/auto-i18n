@@ -15,12 +15,13 @@ export interface TOptions {
 	editor?: boolean | AutoI18NEditorConfig
 	lang?: string
 	overrideMissing?: string
-	values?: { [name: string]: TValue | undefined; count?: number }
+	values?: { [name: string]: TValue | undefined }
 }
 
 export type TValue =
 	| string
 	| number
+	| boolean
 	| { prefix?: string; visible: string | number; suffix?: string }
 
 export class AutoI18N {
@@ -206,6 +207,11 @@ export class AutoI18N {
 		return text
 	}
 
+	static #regex_$t = /^\$t\s+(?<category>\S+)\s+(?<key>\S+)(?:\s(?<lang>\S+))?$/
+	static #regex_$match = /^\$match\s+(?<varname>\S+)\s+(?<patterns>.+)$/
+	static #regex_$if = /^\$if\s+(?<varname>\S+)\s+(?<true>.+?)(?:\s+\$else\s+(?<false>.+))?$/
+	static #regex_base = /^(?<varname>\S+)$/
+
 	interpolate(
 		text: string,
 		values: NonNullable<TOptions["values"]>,
@@ -220,44 +226,76 @@ export class AutoI18N {
 			if (end == -1) break
 			let value = ""
 			const expr = text.slice(start + 2, end).trim()
-			if (expr.startsWith("$t")) {
-				const parts = expr.split(/\s+/)
-				if (parts.length < 3) {
-					console.error("[auto-i18n] Failed to interpolate $t: too few values", {
-						expression: expr,
-					})
-					value = "I18N_INTERPOLATE_ERROR"
-				} else {
-					const [, category, key, lang = options.lang ?? this.#lang] = parts
-					value = this.t(category, key, { ...options, editor: false, values, lang })
+
+			let match: RegExpExecArray | null = null
+			if ((match = AutoI18N.#regex_$t.exec(expr))) {
+				const { category, key, lang = this.#lang } = match.groups!
+				value = this.t(category, key, { ...options, editor: false, values, lang })
+			} else if ((match = AutoI18N.#regex_$match.exec(expr))) {
+				const { varname, patterns } = match.groups!
+				const matches = Array.from(patterns.matchAll(/(?<amount>[\d_]):/g))
+				const rules: { [amount: string]: string } = {}
+				for (let i = 0; i < matches.length; i++) {
+					const { 0: match, groups, index } = matches[i]
+					const { amount } = groups!
+					const start = index + match.length
+					const end = matches[i + 1]?.index
+					const rule = patterns.slice(start, end)
+					rules[amount] = rule.trim()
 				}
-			} else if (expr.startsWith("$count")) {
-				if (values.count == undefined)
-					console.warn("[auto-i18n] Tried to interpolate a $count without a count value")
-				else {
-					const matches = Array.from(expr.matchAll(/(?<amount>[\dn]):/g))
-					const rules: { [amount: string]: string } = {}
-					for (let i = 0; i < matches.length; i++) {
-						const { 0: match, groups, index } = matches[i]
-						const { amount } = groups!
-						const start = index + match.length
-						const end = matches[i + 1]?.index
-						const rule = expr.slice(start, end)
-						rules[amount] = rule.trim()
+
+				const tvalue = values[varname]
+				let matchResult: string | undefined
+				if (tvalue == undefined) {
+					console.error(`[auto-i18n] Failed to interpolate $match: missing "${varname}" value`, {
+						expression: expr,
+						values,
+					})
+				} else {
+					if (typeof tvalue == "object") matchResult = rules[tvalue.visible] ?? rules._
+					else matchResult = rules[tvalue.toString()] ?? rules._
+
+					if (matchResult == undefined) {
+						console.warn("[auto-i18n] Tried to interpolate a $match without a default case", {
+							expression: expr,
+							values,
+						})
+						matchResult = ""
 					}
 
-					const val = rules[values.count] ?? rules.n
-					if (!val)
-						console.warn("[auto-i18n] Tried to interpolate a $count without a default case (n:)")
-
-					value = val ?? ""
+					if (typeof tvalue == "object")
+						value = (tvalue.prefix ?? "") + matchResult + (tvalue.suffix ?? "")
+					else value = matchResult
 				}
-			} else {
-				const tvalue = values[expr]
+			} else if ((match = AutoI18N.#regex_base.exec(expr))) {
+				const { varname } = match.groups!
+				const tvalue = values[varname]
 				if (typeof tvalue == "object")
 					value = (tvalue.prefix ?? "") + tvalue.visible + (tvalue.suffix ?? "")
-				else if (typeof tvalue == "string") value = tvalue
-				else console.warn("[auto-i18n] Tried to interpolate missing value", { expression: expr })
+				else if (tvalue != undefined) value = tvalue.toString()
+				else
+					console.warn("[auto-i18n] Tried to interpolate missing value", {
+						expression: expr,
+						values,
+					})
+			} else if ((match = AutoI18N.#regex_$if.exec(expr))) {
+				const { varname, true: ifTrue, false: ifFalse = "" } = match.groups!
+				const tvalue = values[varname]
+				if (typeof tvalue == "object")
+					value =
+						(tvalue.prefix ?? "") + (tvalue.visible ? ifTrue : ifFalse) + (tvalue.suffix ?? "")
+				else if (tvalue != undefined) value = tvalue ? ifTrue : ifFalse
+				else
+					console.warn("[auto-i18n] Tried to interpolate missing value", {
+						expression: expr,
+						values,
+					})
+			} else {
+				console.error("[auto-18n] Failed to interpolate: could not understand expression", {
+					expression: expr,
+					values,
+				})
+				value = "I18N_INTERPOLATE_ERROR"
 			}
 			result += text.slice(lastEnd, start) + value
 			lastEnd = end + 2
