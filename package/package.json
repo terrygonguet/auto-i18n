@@ -1,6 +1,7 @@
 {
-	"name": "auto-i18n",
+	"name": "@terrygonguet/auto-i18n",
 	"version": "0.0.1",
+	"license": "MIT",
 	"scripts": {
 		"dev": "vite dev",
 		"build": "vite build && npm run prepack",
@@ -54,9 +55,22 @@
 		"vite": "^6.2.5"
 	},
 	"keywords": [
-		"svelte"
+		"svelte",
+		"i18n"
 	],
 	"dependencies": {
 		"@terrygonguet/utils": "^0.6.0"
+	},
+	"author": {
+		"email": "terry@gonguet.com",
+		"name": "Terry Gonguet",
+		"url": "https://terry.gonguet.com/"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/terrygonguet/auto-i18n.git"
+	},
+	"bugs": {
+		"url": "https://github.com/terrygonguet/auto-i18n/issues"
 	}
 }
