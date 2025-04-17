@@ -33,8 +33,16 @@
 		</thead>
 		<tbody>
 			<tr>
-				<td>{@html t("home", "if", { values: { condition: true } })}</td>
-				<td>{@html t("home", "if", { values: { condition: false } })}</td>
+				<td
+					>{@html t("home", "if", {
+						values: { condition: { prefix: "<b>", visible: true, suffix: "</b>" } },
+					})}</td
+				>
+				<td
+					>{@html t("home", "if", {
+						values: { condition: { prefix: "<b>", visible: false, suffix: "</b>" } },
+					})}</td
+				>
 			</tr>
 		</tbody>
 	</table>

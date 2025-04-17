@@ -22,7 +22,7 @@ export type TValue =
 	| string
 	| number
 	| boolean
-	| { prefix?: string; visible: string | number; suffix?: string }
+	| { prefix?: string; visible: string | number | boolean; suffix?: string }
 
 export class AutoI18N {
 	fetch: typeof fetch
@@ -207,7 +207,7 @@ export class AutoI18N {
 		return text
 	}
 
-	static #regex_$t = /^\$t\s+(?<category>\S+)\s+(?<key>\S+)(?:\s(?<lang>\S+))?$/
+	static #regex_$t = /^\$t\s+(?<category>\S+)\.(?<key>\S+)(?:\s(?<lang>\S+))?$/
 	static #regex_$match = /^\$match\s+(?<varname>\S+)\s+(?<patterns>.+)$/
 	static #regex_$if = /^\$if\s+(?<varname>\S+)\s+(?<true>.+?)(?:\s+\$else\s+(?<false>.+))?$/
 	static #regex_base = /^(?<varname>\S+)$/
@@ -252,7 +252,7 @@ export class AutoI18N {
 						values,
 					})
 				} else {
-					if (typeof tvalue == "object") matchResult = rules[tvalue.visible] ?? rules._
+					if (typeof tvalue == "object") matchResult = rules[tvalue.visible.toString()] ?? rules._
 					else matchResult = rules[tvalue.toString()] ?? rules._
 
 					if (matchResult == undefined) {
