@@ -1,58 +1,25 @@
-# Svelte library
+# ![temp icon](/static/favicon.svg) `@terrygonguet/auto-i18n`
 
-Everything you need to build a Svelte library, powered by [`sv`](https://npmjs.com/package/sv).
+This is an experimental way of doing i18n in [Svelte](https://svelte.dev/docs/svelte/overview) 5, focusing on [DX](https://en.wikipedia.org/wiki/User_experience#Developer_experience) and ease of editing. Performance and low bandwidth usage are sub goals as well.
 
-Read more about creating a library [in the docs](https://svelte.dev/docs/kit/packaging).
+## Why
 
-## Creating a project
+Source data for translations is usually considered part of the source code for an app. This allows us to version it easily and even [type check it](https://github.com/ivanhofer/typesafe-i18n).
 
-If you're seeing this, you've probably already done this step. Congrats!
+However this makes changing translations very hard to non-developpers and clashes with the user-friendliness of most CMSes. Why is it easy to fix a typo in a blog post but you have to file a bug report for a typo in the footer?
 
-```bash
-# create a new project in the current directory
-npx sv create
+This project asks "what if we could make editing translations end-user-friendly as well?"
 
-# create a new project in my-app
-npx sv create my-app
-```
+## How
 
-## Developing
+We use Svelte's `{@html ...}` [tag](https://svelte.dev/docs/svelte/@html) for every string so that when the editor is open we can replace the text with an element (like a `<div>` or a `<span>` with `display: contents`), allowing the end-user to simply click on the displayed text to edit it.
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+Every translation string has a _category_ (unit of loading) and a _key_ that identifies it. During SSR, SvelteKit automagically intercepts the queries and bundles the responses in the HTML sent to the client, allowing for fully localized pre-rendering without redundant requests when hydrating the page.
 
-```bash
-npm run dev
+On the server side, we expose a function to expose the API paths the client side expects and interface with your storage solution. You then simply call that function in the `handle` [hook](https://svelte.dev/docs/kit/hooks#Server-hooks-handle).
 
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
-```
+## What
 
-Everything inside `src/lib` is part of your library, everything inside `src/routes` can be used as a showcase or preview app.
+This project is extremely early and experimental, everything can and will change frequently.
 
-## Building
-
-To build your library:
-
-```bash
-npm run package
-```
-
-To create a production version of your showcase app:
-
-```bash
-npm run build
-```
-
-You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
-
-## Publishing
-
-Go into the `package.json` and give your package the desired name through the `"name"` option. Also consider adding a `"license"` field and point it to a `LICENSE` file which you can create from a template (one popular option is the [MIT license](https://opensource.org/license/mit/)).
-
-To publish your library to [npm](https://www.npmjs.com):
-
-```bash
-npm publish
-```
+Some documentation and examples are available at [auto-i18n.gonguet.com](http://auto-i18n.gonguet.com).
