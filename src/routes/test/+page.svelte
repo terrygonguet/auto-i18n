@@ -1,8 +1,8 @@
 <script>
-	import { fadeParams } from "$lib/transition"
 	import { fade } from "svelte/transition"
 	import content from "./content.html?raw"
 	import { page } from "$app/state"
+	import { fadeParams } from "$minilib/transition.js"
 
 	const { i18n } = $derived(page.data)
 </script>

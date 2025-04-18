@@ -1,5 +1,8 @@
-import { db, schema } from "$lib/server/db"
-import { createAutoI18NHandler, type CreateAutoI18NHandlerOptions } from "auto-i18n/server"
+import { db, schema } from "$minilib/db/index.js"
+import {
+	createAutoI18NHandler,
+	type CreateAutoI18NHandlerOptions,
+} from "@terrygonguet/auto-i18n/server"
 import { and, inArray, sql } from "drizzle-orm"
 
 const fetchCategory: CreateAutoI18NHandlerOptions["fetchCategory"] = async ({

@@ -1,4 +1,4 @@
-import { AutoI18N } from "auto-i18n"
+import { AutoI18N } from "@terrygonguet/auto-i18n"
 
 export const load = async ({ fetch }) => {
 	const i18n = new AutoI18N({

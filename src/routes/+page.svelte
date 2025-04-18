@@ -1,6 +1,6 @@
 <script>
 	import { page } from "$app/state"
-	import { fadeParams } from "$lib/transition"
+	import { fadeParams } from "$minilib/transition.js"
 	import { fade } from "svelte/transition"
 
 	const { i18n, t } = $derived(page.data)

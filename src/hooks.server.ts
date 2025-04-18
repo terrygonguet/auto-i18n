@@ -1,4 +1,4 @@
-import { i18nHandler } from "$lib/server/i18n"
+import { i18nHandler } from "$minilib/i18n/index.js"
 
 export const handle = async ({ resolve, event }) => {
 	const i18nResult = await i18nHandler(event)
