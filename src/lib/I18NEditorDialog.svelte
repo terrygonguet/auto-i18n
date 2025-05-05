@@ -24,10 +24,10 @@
 </script>
 
 <script lang="ts">
+	import { safe } from "@terrygonguet/utils/result"
 	import { getContext, tick, untrack } from "svelte"
 	import type { Radio } from "./radio.js"
 	import { type TOptions, type AutoI18N } from "./index.js"
-	import { safe } from "@terrygonguet/utils/result"
 
 	let { autoload = false, open, close, onChange }: Props = $props()
 
@@ -39,12 +39,16 @@
 				type: "translation"
 				category: string
 				key: string
-				values: NonNullable<TOptions["values"]>
+				values?: TOptions["values"]
 				multiline?: { selected: string }
 		  }
 		| { type: "content"; url?: string }
+		| { type: "see-all"; search: string }
+		| { type: never }
 
-	let mode = $state<Mode>({ type: "content" })
+	// impossible start state to force recomputing on first open
+	let mode = $state<Mode>({ type: "initial" as never })
+	let seeAllSide = $state<"end" | "start">("end")
 	let dialogEl = $state<HTMLDialogElement>()!
 
 	let anchorEl = $state<HTMLElement>()
@@ -84,6 +88,7 @@
 					tick().then(() => dialogEl.showModal())
 					break
 				case "content":
+					anchorEl = undefined
 					mode = { type: "content", url: args.url }
 					tick().then(() => dialogEl.showModal())
 					break
@@ -101,6 +106,10 @@
 		const range = document.createRange()
 		range.selectNode(element)
 		return range.getBoundingClientRect()
+	}
+
+	function filterAllEntries(entries: [category: string, key: string][], search: string) {
+		return entries.filter(([cat, key]) => (cat + "." + key).includes(search))
 	}
 
 	async function onSubmit(evt: SubmitEvent) {
@@ -129,6 +138,26 @@
 		}
 	}
 
+	function onSeeAllClick() {
+		anchorEl = undefined
+		mode = { type: "see-all", search: "" }
+		tick().then(() => dialogEl.showModal())
+	}
+
+	function onSeeAllSwitchClick() {
+		seeAllSide = seeAllSide == "end" ? "start" : "end"
+	}
+
+	function onSeeAllKeyClick(category: string, key: string) {
+		return function () {
+			mode = {
+				type: "translation",
+				category,
+				key,
+			}
+		}
+	}
+
 	function onDialogClick(evt: Event) {
 		if (evt.target == evt.currentTarget) dialogEl.close()
 	}
@@ -145,18 +174,74 @@
 
 <svelte:window bind:scrollY />
 
-<div id="i18n-editor-on-sign"></div>
+<div id="i18n-editor-on-sign">
+	<aside data-side={seeAllSide}>
+		<button id="i18n-editor-see-all" onclick={onSeeAllClick}>
+			{t("auto-i18n", "see_all", { overrideMissing: "See all" })}
+		</button>
+		<button
+			aria-label={t("auto-i18n", "see_all_switch", { overrideMissing: "Switch side" })}
+			onclick={onSeeAllSwitchClick}
+		>
+			<!-- Icon from https://icons.mono.company -->
+			<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+				<path
+					d="M14.2929 2.29289C14.6834 1.90237 15.3166 1.90237 15.7071 2.29289L19.7071 6.29289C20.0976 6.68342 20.0976 7.31658 19.7071 7.70711L15.7071 11.7071C15.3166 12.0976 14.6834 12.0976 14.2929 11.7071C13.9024 11.3166 13.9024 10.6834 14.2929 10.2929L16.5858 8L5 8C4.44772 8 4 7.55228 4 7C4 6.44771 4.44772 6 5 6L16.5858 6L14.2929 3.70711C13.9024 3.31658 13.9024 2.68342 14.2929 2.29289ZM9.70711 12.2929C10.0976 12.6834 10.0976 13.3166 9.70711 13.7071L7.41421 16H19C19.5523 16 20 16.4477 20 17C20 17.5523 19.5523 18 19 18H7.41421L9.70711 20.2929C10.0976 20.6834 10.0976 21.3166 9.70711 21.7071C9.31658 22.0976 8.68342 22.0976 8.29289 21.7071L4.29289 17.7071C4.10536 17.5196 4 17.2652 4 17C4 16.7348 4.10536 16.4804 4.29289 16.2929L8.29289 12.2929C8.68342 11.9024 9.31658 11.9024 9.70711 12.2929Z"
+				></path>
+			</svg>
+		</button>
+	</aside>
+</div>
 
-<dialog bind:this={dialogEl} id="i18n-editor" style:transform onclick={onDialogClick}>
-	{#if mode.type == "translation"}
+<dialog
+	bind:this={dialogEl}
+	id="i18n-editor"
+	class:i18n-editor-big={mode.type == "see-all"}
+	style:transform
+	onclick={onDialogClick}
+>
+	{#if mode.type == "see-all"}
+		{@const entries = Array.from(i18n.keysInUse).map(
+			(encoded) => JSON.parse(encoded) as [string, string],
+		)}
+		{@const filtered = filterAllEntries(entries, mode.search)}
+		{@const sorted = filtered.sort()}
+		<div>
+			<h2 class="i18n-editor-title">
+				{t("auto-i18n", "all_title", { overrideMissing: "All keys" })}
+			</h2>
+			<label for="i18n-editor-search">
+				{t("auto-i18n", "search", { overrideMissing: "Search:" })}
+				<input
+					id="i18n-editor-search"
+					class="i18n-editor-monoline-value"
+					bind:value={mode.search}
+				/>
+			</label>
+			<ul id="i18n-editor-all-keys">
+				{#each sorted as [category, key]}
+					<li>
+						<button onclick={onSeeAllKeyClick(category, key)}>
+							<code>{category}.{key}</code>
+							<span>{i18n.raw(category, key)}</span>
+						</button>
+					</li>
+				{/each}
+			</ul>
+		</div>
+	{:else if mode.type == "translation"}
 		{@const { category, key, values, multiline } = mode}
-		{@const hasValues = Object.keys(values).length > 0}
+		{@const hasValues = values && Object.keys(values).length > 0}
 		<form onsubmit={onSubmit}>
-			<p id="i18n-editor-title"><code>{category}.{key}</code></p>
+			<h2 class="i18n-editor-title"><code>{category}.{key}</code></h2>
 			<input name="category" value={category} type="hidden" required />
 			<input name="key" value={key} type="hidden" required />
 
-			{#if hasValues}
+			{#if values == undefined}
+				<p class="i18n-editor-subtitle">
+					{@html t("auto-i18n", "no_values", { overrideMissing: "Values unavailable" })}
+				</p>
+			{:else if hasValues}
 				<div id="i18n-editor-values">
 					<p class="i18n-editor-subtitle">
 						{t("auto-i18n", "title_values", { overrideMissing: "Values" })}
@@ -243,14 +328,14 @@
 		{@const { url } = mode}
 		<div id="i18n-editor-content">
 			<p>
-				{@html t("auto-i18n", "external_content", {
+				{t("auto-i18n", "external_content", {
 					overrideMissing: "This text is external content not managed by Auto-i18n.",
 				})}
 			</p>
 			{#if url}
 				<p id="i18n-editor-content-url">
 					<a href={url} target="_blank">
-						{@html t("auto-i18n", "content_url", { overrideMissing: "View content" })}
+						{t("auto-i18n", "content_url", { overrideMissing: "View content" })}
 					</a>
 				</p>
 			{/if}
@@ -276,6 +361,7 @@
 
 	#i18n-editor-on-sign {
 		--i18n-editor-sign-border-color: oklch(70.4% 0.14 182.503);
+		--i18n-editor-sign-color: oklch(98.4% 0.014 180.72);
 		--i18n-editor-sign-border-width: 8px;
 
 		pointer-events: none;
@@ -283,6 +369,42 @@
 		inset: 0;
 		z-index: 50;
 		border: var(--i18n-editor-sign-border-width) solid var(--i18n-editor-sign-border-color);
+		color: var(--i18n-editor-sign-color);
+
+		aside {
+			pointer-events: all;
+			position: absolute;
+			inset-block-start: 0;
+			background-color: var(--i18n-editor-sign-border-color);
+			display: flex;
+			flex-direction: column;
+			gap: 0.25rem;
+			padding-block-end: 1.5rem;
+		}
+		aside[data-side="end"] {
+			inset-inline-end: 0;
+			clip-path: polygon(0 0, 100% 0, 100% 100%, 0 calc(100% - 1.25rem));
+		}
+		aside[data-side="start"] {
+			inset-inline-start: 0;
+			clip-path: polygon(0 0, 100% 0, 100% calc(100% - 1.25rem), 0 100%);
+		}
+
+		button {
+			cursor: pointer;
+			padding: 0.25rem 0.75rem;
+		}
+		#i18n-editor-see-all {
+			width: min-content;
+			font-size: 0.875rem;
+			line-height: 1.25;
+		}
+
+		svg {
+			height: 1.2rem;
+			fill: currentColor;
+			margin-inline: auto;
+		}
 	}
 
 	dialog#i18n-editor {
@@ -302,20 +424,25 @@
 		top: 0;
 		left: 0;
 		border: 1px solid var(--i18n-editor-dialog-border-color);
-	}
-	dialog#i18n-editor::backdrop {
-		background-color: var(--i18n-editor-dialog-backdrop);
+
+		&::backdrop {
+			background-color: var(--i18n-editor-dialog-backdrop);
+		}
 	}
 
-	dialog#i18n-editor > form {
+	dialog#i18n-editor > * {
 		display: flex;
 		flex-direction: column;
 		gap: 1rem;
 		padding: 1rem;
 		min-width: 28rem;
+		max-width: 40dvi;
+	}
+	dialog#i18n-editor.i18n-editor-big > * {
+		width: 100dvi;
 	}
 
-	#i18n-editor-title {
+	.i18n-editor-title {
 		text-align: center;
 		font-size: 1.25rem;
 
@@ -331,6 +458,39 @@
 		text-align: center;
 		text-decoration: underline;
 		text-decoration-color: var(--i18n-editor-dialog-border-color);
+	}
+
+	label[for="i18n-editor-search"] {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+
+		input {
+			flex: 1;
+		}
+	}
+
+	#i18n-editor-all-keys {
+		max-height: 35dvb;
+		overflow: auto;
+
+		li button {
+			display: flex;
+			gap: 0.5rem;
+			cursor: pointer;
+		}
+
+		li code {
+			font-weight: bold;
+		}
+
+		li span {
+			flex: 1;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			white-space: nowrap;
+			opacity: 0.5;
+		}
 	}
 
 	#i18n-editor-values {

@@ -45,6 +45,8 @@ export class AutoI18N {
 	#failedCategories = new Set<string>()
 	#inFlight = new Set<string>()
 
+	keysInUse = new Set<string>()
+
 	constructor({
 		lang,
 		supportedLangs,
@@ -86,6 +88,10 @@ export class AutoI18N {
 
 	get fallbackLang() {
 		return this.#fallbackLang
+	}
+
+	get loadedCategories() {
+		return this.#loadedCategories.values()
 	}
 
 	async load(category: string, { lang = this.#lang, skipIfCached = false } = {}) {
@@ -166,6 +172,9 @@ export class AutoI18N {
 			values = {},
 		} = options
 
+		// !HACK geez I sure wish I had a record or a tuple...
+		if (category != "auto-i18n") this.keysInUse.add(JSON.stringify([category, key]))
+
 		this.#cacheSubscribe()
 		this.#langSubscribe()
 		this.#editorSubscibe()
@@ -205,6 +214,20 @@ export class AutoI18N {
 		const text = this.#cache.get(lang + "." + category)?.[key]
 		if (text == undefined && autoload) this.load(category, { lang })
 		return text
+	}
+
+	rawCategory(
+		category: string,
+		{ lang = this.#lang, autoload = false, includeFallback = false } = {},
+	) {
+		this.#cacheSubscribe()
+		const cached = this.#cache.get(lang + "." + category)
+		if (!cached && autoload) this.load(category, { lang })
+		if (includeFallback) {
+			const cachedFallback = this.#cache.get(this.#fallbackLang + "." + category)
+			if (!cachedFallback && autoload) this.load(category, { lang: this.#fallbackLang })
+			return { ...(cachedFallback ?? {}), ...(cached ?? {}) }
+		} else return cached ?? {}
 	}
 
 	static #regex_$t = /^\$t\s+(?<category>\S+)\.(?<key>\S+)(?:\s(?<lang>\S+))?$/

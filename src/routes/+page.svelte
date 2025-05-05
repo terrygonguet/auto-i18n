@@ -1,49 +1,29 @@
-<script>
+<script lang="ts">
 	import { page } from "$app/state"
 	import { fadeParams } from "$minilib/transition.js"
 	import { fade } from "svelte/transition"
+	import type { PageData } from "./$types.js"
 
-	const { i18n, t } = $derived(page.data)
+	const { t } = $derived(page.data) as PageData
 </script>
 
-<main in:fade={fadeParams.in} out:fade={fadeParams.out} class="prose mx-auto my-12">
-	<h2>{@html t("home", "title")}</h2>
-	<p>{@html t("home", "p1", { editor: { multiline: true } })}</p>
-	<div class="flex items-center justify-center gap-4">
-		<button class="cursor-pointer border px-2 py-1" onclick={() => i18n.setLang("en")}
-			>{@html t("home", "swap_to_en")}</button
-		>
-		<button class="cursor-pointer border px-2 py-1" onclick={() => i18n.setLang("fr")}
-			>{@html t("home", "swap_to_fr")}</button
-		>
+<svelte:head>
+	<title>{t("home", "page_title", { editor: false })}</title>
+</svelte:head>
+
+<main in:fade={fadeParams.in} out:fade={fadeParams.out} class="py-12">
+	<div class="prose mx-auto w-full">
+		<h1>{@html t("home", "h1")}</h1>
+		<h2>{@html t("home", "what_heading")}</h2>
+		<p>{@html t("home", "what_p1", { editor: { multiline: true } })}</p>
+		<p>{@html t("home", "what_p2", { editor: { multiline: true } })}</p>
+		<p>{@html t("home", "what_p3", { editor: { multiline: true } })}</p>
+		<h2>{@html t("home", "why_heading")}</h2>
+		<p>{@html t("home", "why_p1", { editor: { multiline: true } })}</p>
+		<p>{@html t("home", "why_p2", { editor: { multiline: true } })}</p>
+		<p>{@html t("home", "why_p3", { editor: { multiline: true } })}</p>
+		<h2>{@html t("home", "how_heading")}</h2>
+		<p>{@html t("home", "how_p1", { editor: { multiline: true } })}</p>
+		<p>{@html t("home", "how_p2", { editor: { multiline: true } })}</p>
 	</div>
-	<p>{@html t("home", "p2", { editor: { multiline: true } })}</p>
-	<ul>
-		<li>{@html t("home", "li", { values: { count: 0 } })}</li>
-		<li>{@html t("home", "li", { values: { count: 1 } })}</li>
-		<li>{@html t("home", "li", { values: { count: 2 } })}</li>
-		<li>{@html t("home", "li", { values: { count: 3 } })}</li>
-	</ul>
-	<table>
-		<thead>
-			<tr>
-				<th><code>true</code></th>
-				<th><code>false</code></th>
-			</tr>
-		</thead>
-		<tbody>
-			<tr>
-				<td
-					>{@html t("home", "if", {
-						values: { condition: { prefix: "<b>", visible: true, suffix: "</b>" } },
-					})}</td
-				>
-				<td
-					>{@html t("home", "if", {
-						values: { condition: { prefix: "<b>", visible: false, suffix: "</b>" } },
-					})}</td
-				>
-			</tr>
-		</tbody>
-	</table>
 </main>
