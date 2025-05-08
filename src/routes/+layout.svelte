@@ -2,12 +2,21 @@
 	import "$$/styles.css"
 	import { page } from "$app/state"
 	import iconSrc from "$assets/icon.svg"
+	import globeSrc from "$assets/globe.svg"
 	import type { LayoutData } from "./$types.js"
+	import { invalidateAll } from "$app/navigation"
 
 	let { children } = $props()
 
 	let { i18n, t } = $derived(page.data) as LayoutData
 	let segment = $derived(page.route.id)
+
+	function onLangChange(lang: string) {
+		i18n.setLang(lang)
+		const expires = new Date(3000, 0, 1)
+		document.cookie = `lang=${lang};expires=${expires.toUTCString()}`
+		invalidateAll()
+	}
 
 	function onKeydown(evt: KeyboardEvent) {
 		if (evt.code == "Backslash" && evt.ctrlKey && evt.shiftKey) {
@@ -36,7 +45,9 @@
 		</ul>
 	</nav>
 </header>
+
 {@render children()}
+
 <footer class="flex items-center justify-center gap-6 border-t border-stone-300 bg-stone-100 p-10">
 	<p>
 		{@html t("footer", "made_by", {
@@ -49,6 +60,15 @@
 				year: "2025",
 			},
 		})}
+	</p>
+
+	<p class="flex items-center gap-2">
+		<img class="h-5" src={globeSrc} alt="Globe icon" />
+		<select bind:value={() => i18n.lang, onLangChange} class="border border-teal-500 px-1 py-0.5">
+			{#each i18n.supportedLangs as lang}
+				<option value={lang}>{@html t("general", "langlang_" + lang, { editor: false })}</option>
+			{/each}
+		</select>
 	</p>
 </footer>
 
