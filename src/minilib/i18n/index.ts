@@ -3,7 +3,7 @@ import {
 	createAutoI18NHandler,
 	type CreateAutoI18NHandlerOptions,
 } from "@terrygonguet/auto-i18n/server"
-import { and, inArray, sql } from "drizzle-orm"
+import { and, eq, inArray, sql } from "drizzle-orm"
 
 const fetchCategory: CreateAutoI18NHandlerOptions["fetchCategory"] = async ({
 	where: { lang, category },
@@ -55,14 +55,23 @@ const fetchAll: CreateAutoI18NHandlerOptions["fetchAll"] = async ({
 }
 
 const update: CreateAutoI18NHandlerOptions["update"] = async ({ category, key, langs }) => {
-	const values: (typeof schema.translations.$inferInsert)[] = []
+	const insertValues: (typeof schema.translations.$inferInsert)[] = []
 	for (const [lang, value] of Object.entries(langs)) {
-		if (!value) continue
-		values.push({ lang, category, key, value })
+		if (!value) {
+			db.delete(schema.translations)
+				.where(
+					and(
+						eq(schema.translations.lang, lang),
+						eq(schema.translations.category, category),
+						eq(schema.translations.key, key),
+					),
+				)
+				.run()
+		} else insertValues.push({ lang, category, key, value })
 	}
 
 	db.insert(schema.translations)
-		.values(values)
+		.values(insertValues)
 		.onConflictDoUpdate({
 			target: [schema.translations.lang, schema.translations.category, schema.translations.key],
 			set: { value: sql`excluded.value` },
