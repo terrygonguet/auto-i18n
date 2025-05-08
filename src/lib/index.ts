@@ -45,7 +45,10 @@ export class AutoI18N {
 	#failedCategories = new Set<string>()
 	#inFlight = new Set<string>()
 
-	keysInUse = new Set<string>()
+	#keysInUse = new Set<string>()
+	get keysInUse(): IteratorObject<[category: string, key: string]> {
+		return this.#keysInUse.values().map((encoded) => JSON.parse(encoded))
+	}
 
 	constructor({
 		lang,
@@ -173,7 +176,7 @@ export class AutoI18N {
 		} = options
 
 		// !HACK geez I sure wish I had a record or a tuple...
-		if (category != "auto-i18n") this.keysInUse.add(JSON.stringify([category, key]))
+		if (category != "auto-i18n") this.#keysInUse.add(JSON.stringify([category, key]))
 
 		this.#cacheSubscribe()
 		this.#langSubscribe()

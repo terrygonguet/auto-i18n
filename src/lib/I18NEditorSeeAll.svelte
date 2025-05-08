@@ -13,13 +13,15 @@
 	let i18n = getContext<AutoI18N>("i18n")
 	let t = $derived(i18n.withDefaults({ editor: false, autoload }))
 
-	function processKeysInUse(keysInUse: Set<string>, search: string) {
+	function processKeysInUse(keysInUse: IteratorObject<[string, string]>, search: string) {
 		return keysInUse
-			.values()
-			.map((encoded) => JSON.parse(encoded) as [string, string])
 			.filter(([cat, key]) => (cat + "." + key).includes(search))
 			.toArray()
-			.sort(([a], [b]) => a.localeCompare(b))
+			.sort(([catA, keyA], [catB, keyB]) => {
+				const comp = catA.localeCompare(catB)
+				if (comp == 0) return keyA.localeCompare(keyB)
+				else return comp
+			})
 	}
 </script>
 
