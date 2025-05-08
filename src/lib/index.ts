@@ -171,8 +171,8 @@ export class AutoI18N {
 		for (const category of this.#loadedCategories) {
 			if (!this.#cache.has(lang + "." + category)) toLoad.push(category)
 		}
-		if (toLoad.length > 0) await this.loadAll({ categories: toLoad, langs: [lang] })
 		this.#lang = lang
+		if (toLoad.length > 0) await this.loadAll({ categories: toLoad, langs: [lang] })
 		this.#langChange()
 	}
 

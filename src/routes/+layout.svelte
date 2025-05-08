@@ -4,7 +4,7 @@
 	import iconSrc from "$assets/icon.svg"
 	import globeSrc from "$assets/globe.svg"
 	import type { LayoutData } from "./$types.js"
-	import { invalidateAll } from "$app/navigation"
+	import { invalidate } from "$app/navigation"
 
 	let { children } = $props()
 
@@ -15,7 +15,7 @@
 		i18n.setLang(lang)
 		const expires = new Date(3000, 0, 1)
 		document.cookie = `lang=${lang};expires=${expires.toUTCString()}`
-		invalidateAll()
+		invalidate((url) => url.protocol == "content:")
 	}
 
 	function onKeydown(evt: KeyboardEvent) {
