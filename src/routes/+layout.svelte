@@ -2,11 +2,11 @@
 	import "$$/styles.css"
 	import { page } from "$app/state"
 	import iconSrc from "$assets/icon.svg"
-	import type { PageData } from "./$types.js"
+	import type { LayoutData } from "./$types.js"
 
 	let { children } = $props()
 
-	let { i18n, t } = $derived(page.data) as PageData
+	let { i18n, t } = $derived(page.data) as LayoutData
 	let segment = $derived(page.route.id)
 
 	function onKeydown(evt: KeyboardEvent) {

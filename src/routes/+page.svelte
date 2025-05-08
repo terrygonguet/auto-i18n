@@ -1,11 +1,9 @@
 <script lang="ts">
-	import { page } from "$app/state"
 	import { fadeParams } from "$minilib/transition.js"
 	import { fade } from "svelte/transition"
-	import type { PageData, PageProps } from "./$types.js"
 
-	const { i18n } = $derived(page.data) as PageData
-	let { data }: PageProps = $props()
+	let { data } = $props()
+	let { i18n } = $derived(data)
 </script>
 
 <svelte:head>
