@@ -9,7 +9,17 @@ export default defineConfig({
 })
 
 function transformMD(): Plugin {
-	const marked = new Marked({ async: false })
+	const marked = new Marked(
+		{ async: false },
+		{
+			renderer: {
+				link({ href, tokens }) {
+					const isExternal = href.startsWith("http")
+					return `<a href="${href}" target="${isExternal ? "_blank" : "_self"}" class="text-teal-700 underline">${this.parser.parseInline(tokens)}</a>`
+				},
+			},
+		},
+	)
 	return {
 		name: "transform-markdown",
 		transform(src, id) {
