@@ -60,6 +60,19 @@ export class AutoI18N {
 		this.#lang = typeof lang == "string" ? lang : lang()
 		this.#supportedLangs = Array.isArray(supportedLangs) ? supportedLangs : supportedLangs()
 		this.#fallbackLang = typeof fallbackLang == "string" ? fallbackLang : fallbackLang()
+
+		if (!this.#supportedLangs.includes(this.#lang)) {
+			console.warn(
+				"[auto-i18n] The selected language is not in the list of supported languages, falling back",
+				{
+					lang: this.#lang,
+					fallbackLang: this.#fallbackLang,
+					supportedLangs: this.#supportedLangs,
+				},
+			)
+			this.#lang = this.#fallbackLang
+		}
+
 		if (!this.#supportedLangs.includes(this.#fallbackLang))
 			console.warn("[auto-i18n] The fallback language is not in the list of supported languages", {
 				fallbackLang: this.#fallbackLang,
