@@ -36,6 +36,10 @@
 		"./server": {
 			"types": "./dist/server.d.ts",
 			"svelte": "./dist/server.js"
+		},
+		"./I18NEditorDialog.svelte": {
+			"types": "./dist/I18NEditorDialog.svelte.d.ts",
+			"svelte": "./dist/I18NEditorDialog.svelte"
 		}
 	},
 	"peerDependencies": {
@@ -50,14 +54,14 @@
 		"@tailwindcss/vite": "^4.0.0",
 		"@types/better-sqlite3": "^7.6.12",
 		"drizzle-kit": "^0.30.2",
+		"prettier": "^3.4.2",
 		"prettier-plugin-svelte": "^3.3.3",
 		"prettier-plugin-tailwindcss": "^0.6.11",
-		"prettier": "^3.4.2",
 		"publint": "^0.3.2",
-		"svelte-check": "^4.0.0",
 		"svelte": "^5.0.0",
+		"svelte-check": "^4.0.0",
 		"tailwindcss": "^4.0.0",
-		"typescript": "^5.0.0",
+		"typescript": "^5.8.3",
 		"vite": "^6.2.5"
 	},
 	"dependencies": {
