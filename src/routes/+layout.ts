@@ -7,5 +7,5 @@ export const load = async ({ fetch }) => {
 		fallbackLang: "en",
 		fetch,
 	})
-	return { i18n, t: i18n.t.bind(i18n) }
+	return { i18n, t: i18n.t.bind(i18n), c: i18n.c.bind(i18n) }
 }
