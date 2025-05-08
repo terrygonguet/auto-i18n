@@ -1,0 +1,90 @@
+<script lang="ts">
+	import { getContext } from "svelte"
+	import type { AutoI18N } from "./index.js"
+
+	interface Props {
+		autoload?: boolean
+		search: string
+		onKeyClick(category: string, key: string): void
+	}
+
+	let { search = $bindable(), autoload = false, onKeyClick }: Props = $props()
+
+	let i18n = getContext<AutoI18N>("i18n")
+	let t = $derived(i18n.withDefaults({ editor: false, autoload }))
+
+	function processKeysInUse(keysInUse: Set<string>, search: string) {
+		return keysInUse
+			.values()
+			.map((encoded) => JSON.parse(encoded) as [string, string])
+			.filter(([cat, key]) => (cat + "." + key).includes(search))
+			.toArray()
+			.sort(([a], [b]) => a.localeCompare(b))
+	}
+</script>
+
+<div>
+	<h2 class="i18n-editor-title">
+		{t("auto-i18n", "all_title", { overrideMissing: "All keys" })}
+	</h2>
+	<label for="i18n-editor-search">
+		{t("auto-i18n", "search", { overrideMissing: "Search:" })}
+		<input id="i18n-editor-search" bind:value={search} />
+	</label>
+	<ul id="i18n-editor-all-keys">
+		{#each processKeysInUse(i18n.keysInUse, search) as [category, key]}
+			<li>
+				<button onclick={() => onKeyClick(category, key)}>
+					<code>{category}.{key}</code>
+					<span>{i18n.raw(category, key)}</span>
+				</button>
+			</li>
+		{/each}
+	</ul>
+</div>
+
+<style>
+	.i18n-editor-title {
+		text-align: center;
+		font-size: 1.25rem;
+	}
+
+	label[for="i18n-editor-search"] {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+
+		input {
+			flex: 1;
+		}
+	}
+
+	#i18n-editor-search {
+		padding-inline: 0.25rem;
+		border-block-end: 1px solid var(--i18n-editor-dialog-border-color);
+		font-family: var(--i18n-editor-font-mono);
+	}
+
+	#i18n-editor-all-keys {
+		max-height: 35dvb;
+		overflow: auto;
+
+		li button {
+			display: flex;
+			gap: 0.5rem;
+			cursor: pointer;
+		}
+
+		li code {
+			font-weight: bold;
+		}
+
+		li span {
+			flex: 1;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			white-space: nowrap;
+			opacity: 0.5;
+		}
+	}
+</style>
