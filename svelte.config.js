@@ -12,6 +12,7 @@ const config = {
 			"@terrygonguet/auto-i18n": "src/lib/index.js",
 			"$minilib/*": "src/minilib/*",
 			"$assets/*": "assets/*",
+			"$content/*": "src/content/*",
 			"$$/styles.css": "src/styles.css",
 		},
 	},
