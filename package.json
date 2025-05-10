@@ -66,7 +66,7 @@
 		"vite": "^6.2.5"
 	},
 	"dependencies": {
-		"@terrygonguet/utils": "^0.6.0",
+		"@terrygonguet/utils": "^0.7.1",
 		"better-sqlite3": "^11.8.0",
 		"drizzle-orm": "^0.40.0",
 		"marked": "^15.0.11"
