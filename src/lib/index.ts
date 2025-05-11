@@ -272,7 +272,7 @@ export class AutoI18N {
 				value = this.t(category, key, { ...options, editor: false, values, lang })
 			} else if ((match = AutoI18N.#regex_$match.exec(expr))) {
 				const { varname, patterns } = match.groups!
-				const matches = Array.from(patterns.matchAll(/(?<amount>[\d_]):/g))
+				const matches = Array.from(patterns.matchAll(/(?<amount>[\w_]):/g))
 				const rules: { [amount: string]: string } = {}
 				for (let i = 0; i < matches.length; i++) {
 					const { 0: match, groups, index } = matches[i]
