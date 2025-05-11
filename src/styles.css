@@ -14,3 +14,27 @@ html {
 	height: 100dvh;
 	width: 100%;
 }
+
+@utility prose {
+	/* Code blocks */
+	pre > code > .filename {
+		@apply m-0 mb-1 text-stone-400;
+	}
+
+	:not(pre) > code {
+		&::before,
+		&::after {
+			content: initial;
+		}
+
+		@apply rounded bg-teal-100 px-1 font-normal;
+	}
+
+	a code {
+		@apply text-teal-900;
+	}
+
+	h4 code {
+		@apply font-bold;
+	}
+}
