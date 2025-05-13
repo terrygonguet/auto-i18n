@@ -1,5 +1,7 @@
 # Auto-i18n
 
+Yes, the name is bad. Please [suggest a good one](https://github.com/terrygonguet/auto-i18n/issues/1) before it's too late.
+
 ## What
 
 `auto-i18n` is a [SvelteKit](https://svelte.dev/docs/kit) library to help you translate and localize your app.
