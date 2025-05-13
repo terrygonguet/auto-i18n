@@ -8,6 +8,7 @@ import { and, eq, inArray, sql } from "drizzle-orm"
 const fetchCategory: CreateAutoI18NHandlerOptions["fetchCategory"] = async ({
 	where: { lang, category },
 }) => {
+	console.log("fetchCategory", { lang, category })
 	const pairs = await db.query.translations.findMany({
 		columns: { key: true, value: true },
 		where: (table, { and, eq }) => and(eq(table.lang, lang), eq(table.category, category)),
@@ -26,6 +27,7 @@ const fetchCategory: CreateAutoI18NHandlerOptions["fetchCategory"] = async ({
 const fetchAll: CreateAutoI18NHandlerOptions["fetchAll"] = async ({
 	where: { langs, categories },
 }) => {
+	console.log("fetchAll", { langs, categories })
 	const langsWhere = langs?.length ? inArray(schema.translations.lang, langs) : undefined
 	const categoriesWhere = categories?.length
 		? inArray(schema.translations.category, categories)
@@ -55,6 +57,7 @@ const fetchAll: CreateAutoI18NHandlerOptions["fetchAll"] = async ({
 }
 
 const update: CreateAutoI18NHandlerOptions["update"] = async ({ category, key, langs }) => {
+	console.log("update", { category, key, langs })
 	const insertValues: (typeof schema.translations.$inferInsert)[] = []
 	for (const [lang, value] of Object.entries(langs)) {
 		if (!value) {

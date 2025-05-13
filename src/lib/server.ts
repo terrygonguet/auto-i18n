@@ -49,6 +49,9 @@ export function createAutoI18NHandler({
 	const categoryRegEx = /^\/locale\/(?<lang>.+)\/(?<category>.+)\.json$/
 	const allRegEx = /^\/locale\/all\.json$/
 
+	// HACK: stringified `where` is the key and the full response object is the value
+	const cache = new Map<string, any>()
+
 	return async (event) => {
 		switch (event.request.method) {
 			case "GET": {
@@ -58,12 +61,19 @@ export function createAutoI18NHandler({
 					if (canFetchCategory ? !canFetchCategory({ where: { lang, category }, event }) : false)
 						return handled(403, "auto-i18n.error_access_denied")
 
-					const [err, data] = await safe(() =>
+					const cacheKey = JSON.stringify({ lang, category })
+					const cached = cache.get(cacheKey)
+					if (cached) return handled(200, cached)
+
+					const [err, data] = await safe(async () =>
 						fetchCategory({ where: { lang, category }, event }),
 					).asTuple()
 					if (err) return handled(500, "auto-i18n.error_get_fail")
 					else if (!data) return handled(404, "auto-i18n.error_not_found")
-					else return handled(200, data)
+					else {
+						cache.set(cacheKey, data)
+						return handled(200, data)
+					}
 				}
 
 				if (allRegEx.test(event.url.pathname)) {
@@ -74,12 +84,19 @@ export function createAutoI18NHandler({
 					if (canFetchAll ? !canFetchAll({ where: { langs, categories }, event }) : false)
 						return handled(403, "auto-i18n.error_access_denied")
 
-					const [err, data] = await safe(() =>
+					const cacheKey = JSON.stringify({ langs, categories })
+					const cached = cache.get(cacheKey)
+					if (cached) return handled(200, cached)
+
+					const [err, data] = await safe(async () =>
 						fetchAll({ where: { categories, langs }, event }),
 					).asTuple()
 					if (err) return handled(500, "auto-i18n.error_get_fail")
 					else if (!data) return handled(404, "auto-i18n.error_not_found")
-					else return handled(200, data)
+					else {
+						cache.set(cacheKey, data)
+						return handled(200, data)
+					}
 				}
 
 				return { handled: false }
@@ -107,11 +124,15 @@ export function createAutoI18NHandler({
 					if (canUpdate ? !canUpdate({ category, key, langs }, { event }) : false)
 						return handled(403, "auto-i18n.error_access_denied")
 
-					const { error: err } = await safe(() =>
+					const { error: err } = await safe(async () =>
 						update({ category, key, langs }, { event }),
 					).asObject()
 					if (err) return handled(500, "auto-i18n.error_save_fail")
-					else return handled(200, "auto-i18n.update_success")
+					else {
+						// HACK: just nuke the cache on update
+						cache.clear()
+						return handled(200, "auto-i18n.update_success")
+					}
 				} else return { handled: false }
 			}
 
