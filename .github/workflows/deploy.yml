@@ -1,0 +1,25 @@
+name: "Build and deploy"
+on:
+  workflow_dispatch:  
+  push:
+    branches: [main]
+jobs:
+  build:
+    runs-on: ubuntu@latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js environment
+        uses: actions/setup-node@v3.9.1
+        with:
+          node-version: 22
+      - run: "npm ci"
+      - run: "npm run build"
+      - name: Copy files via SSH
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          password: ${{ secrets.PASSWORD }}
+          source: "build/*"
+          target: "/root/auto-i18n"
