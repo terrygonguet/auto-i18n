@@ -1,8 +1,8 @@
-import { FALLBACK_LANG, SUPPORTED_LANGS } from "$env/static/private"
+import { env } from "$env/dynamic/private"
 import { redirect } from "@sveltejs/kit"
 
-const supportedLangs = SUPPORTED_LANGS.split(",")
-const fallbackLang = FALLBACK_LANG
+const supportedLangs = env.SUPPORTED_LANGS?.split(",") ?? ["en"]
+const fallbackLang = env.FALLBACK_LANG ?? "en"
 
 export const load = async ({ cookies, request }) => {
 	const url = new URL(request.url)
