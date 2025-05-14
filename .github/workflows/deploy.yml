@@ -32,4 +32,6 @@ jobs:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
           password: ${{ secrets.PASSWORD }}
-          script: pm2 restart auto-i18n
+          script: |
+            nvm use 22
+            pm2 restart auto-i18n
