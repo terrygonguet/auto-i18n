@@ -1,6 +1,6 @@
 name: "Build and deploy"
 on:
-  workflow_dispatch:  
+  workflow_dispatch:
   push:
     branches: [main]
 jobs:
@@ -9,17 +9,27 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Setup Node.js environment
+      - name: Setup Node.js
         uses: actions/setup-node@v3.9.1
         with:
           node-version: 22
-      - run: "npm ci"
-      - run: "npm run build"
-      - name: Copy files via SSH
+      - name: Build
+        run: |
+          npm ci
+          npm run build
+      - name: Upload artefacts
         uses: appleboy/scp-action@v1
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
           password: ${{ secrets.PASSWORD }}
+          rm: true
           source: "build/*"
           target: "/root/auto-i18n"
+      - name: PM2 restart
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          password: ${{ secrets.PASSWORD }}
+          script: pm2 restart auto-i18n
