@@ -186,8 +186,28 @@
 </dialog>
 
 <style>
-	:global(.i18n-fragment) {
-		display: contents;
+	:global {
+		.i18n-fragment {
+			display: contents;
+		}
+
+		:where(#i18n-editor-on-sign, dialog#i18n-editor) {
+			&,
+			& * {
+				box-sizing: border-box;
+				margin: 0;
+				padding: 0;
+			}
+
+			input,
+			button,
+			code {
+				border: none;
+				background-color: transparent;
+				font-size: inherit;
+				color: inherit;
+			}
+		}
 	}
 
 	dialog#i18n-editor {
@@ -207,6 +227,7 @@
 		top: 0;
 		left: 0;
 		border: 1px solid var(--i18n-editor-dialog-border-color);
+		font-family: sans-serif;
 
 		&::backdrop {
 			background-color: var(--i18n-editor-dialog-backdrop);

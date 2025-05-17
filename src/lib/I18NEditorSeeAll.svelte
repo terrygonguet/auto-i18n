@@ -75,10 +75,12 @@
 			display: flex;
 			gap: 0.5rem;
 			cursor: pointer;
+			align-items: center;
 		}
 
 		li code {
 			font-weight: bold;
+			font-family: var(--i18n-editor-font-mono);
 		}
 
 		li span {
