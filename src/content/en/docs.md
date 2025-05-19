@@ -8,20 +8,21 @@ npm install @terrygonguet/auto-i18n
 
 ## Usage {#usage}
 
-Until the Svelte ecosystem agrees on a way to add plugins to SvelteKit, you'll have to integrate the different parts of `auto-i18n` into your app yourself.
+Until the Svelte ecosystem agrees on a way to add plugins to SvelteKit, you'll have to integrate the different parts of `auto-i18n` into your app yourself. Don't worry it's pretty easy 😉.
 
-`auto-i18n` makes extensive use of Svelte 5's reactivity primitives. All you have to do is use simple functions and we handle the auto loading and caching and acrobatics needed to have our cool editor. The function calls will be re-run whenever needed to keep your UI in sync.
+`auto-i18n` makes extensive use of Svelte 5's reactivity primitives. All you have to do is use simple functions and we handle the auto loading and caching and acrobatics needed to have SSR and our cool editor. The function calls will be re-run whenever needed to keep your UI in sync.
 
 Like pants, `auto-i18n` comes in two parts: [client](#usage-client) and [server](#usage-server). The server part adds routes to your app so the client can load translations and send new ones. The client part serves as an internationalisation library and loads the editor for changing the translations.
 
 ### Server {#usage-server}
 
-On the server most of the business happens in the `hooks.server.ts` file. You can import the `createAutoI18NHandler` function from `@terrygonguet/auto-i18n/server` and use it to create the titular handler function. Calling this handler in your `handle` hook acts in a similar way that middleware did for [Express](https://www.npmjs.com/package/express) except that you'll have to return the generated `Response` yourself (for now).
+On the server most of the business happens in the `hooks.server.ts` file. You can import the `createAutoI18NHandle` function from `@terrygonguet/auto-i18n/server` and use it to create the titular handle function. This function is a fully self contained [handle](https://svelte.dev/docs/kit/@sveltejs-kit#Handle) hook and can be added to your app via the [sequence](https://svelte.dev/docs/kit/@sveltejs-kit-hooks#sequence) function.
 
 ```ts filename=hooks.server.ts
-import { createAutoI18NHandler } from "@terrygonguet/auto-i18n/server"
+import { sequence } from "@sveltejs/kit/hooks"
+import { createAutoI18NHandle } from "@terrygonguet/auto-i18n/server"
 
-const i18nHandler = createAutoI18NHandler({
+const i18nHandle = createAutoI18NHandle({
 	fetchCategory,
 	canFetchCategory,
 	fetchAll,
@@ -30,17 +31,15 @@ const i18nHandler = createAutoI18NHandler({
 	canUpdate,
 })
 
-export const handle = async ({ resolve, event }) => {
-	const i18nResult = await i18nHandler(event)
-	if (i18nResult.handled) return i18nResult.response
-
+export const handle = sequence(i18nHandle, ({ event, resolve }) => {
+	// do your hook stuff
 	return resolve(event)
-}
+})
 ```
 
-You can call this handler at any point in your `handle` hook. You may want to run your session fetching or auth guards before for instance.
+You probably want to run this function after your session/authentication but before the rest of SvelteKit.
 
-All the values passed to the `createAutoI18NHandler` function are functions too. Those whose name start with "can" are guards, allowing you to grant or deny access to any part of the generated routes. The other functions are here to transfer data from your storage solution to the format that `auto-i18n` expects. Please refer to the [API](#api) section for details.
+All the values passed to the `createAutoI18NHandle` function are functions too. Those whose name start with "can" are guards, allowing you to grant or deny access to any part of the generated routes. The other functions are here to transfer data from your storage solution to the format that `auto-i18n` expects. Please refer to the [API](#api) section for details.
 
 ### Client {#usage-client}
 
@@ -245,7 +244,7 @@ Loads and mounts the editor component. See the section on [the editor](#editor) 
 
 Hides and unmounts the editor component.
 
-### `createAutoI18NHandler` from `@terrygonguet/auto-i18n/server`
+### `createAutoI18NHandle` from `@terrygonguet/auto-i18n/server`
 
 Helper function to create a single handler that behaves like registering multiple API endpoints. The function takes an object of hooks that will be called to interact with your system.
 
