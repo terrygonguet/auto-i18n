@@ -1,6 +1,6 @@
 import { db, schema } from "$minilib/db/index.js"
 import {
-	createAutoI18NHandler,
+	createAutoI18NHandle,
 	type CreateAutoI18NHandlerOptions,
 } from "@terrygonguet/auto-i18n/server"
 import { and, eq, inArray, sql } from "drizzle-orm"
@@ -82,7 +82,7 @@ const update: CreateAutoI18NHandlerOptions["update"] = async ({ category, key, l
 		.run()
 }
 
-export const i18nHandler = createAutoI18NHandler({
+export const i18nHandle = createAutoI18NHandle({
 	fetchCategory,
 	fetchAll,
 	update,

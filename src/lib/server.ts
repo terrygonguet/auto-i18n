@@ -37,7 +37,7 @@ export interface CreateAutoI18NHandlerOptions {
 	): MaybePromise<boolean>
 }
 
-export function createAutoI18NHandler({
+export function createAutoI18NHandle({
 	fetchCategory,
 	canFetchCategory,
 	fetchAll,
