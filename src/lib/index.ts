@@ -8,6 +8,7 @@ export interface AutoI18NConstructorOptions {
 	fallbackLang: string | (() => string)
 	preload?: string[]
 	fetch: typeof fetch
+	mode?: AutoI18N["mode"]
 }
 
 export interface TOptions {
@@ -26,24 +27,44 @@ export type TValue =
 
 export class AutoI18N {
 	fetch: typeof fetch
+	mode: "normal" | "ssr"
+
 	#editor?: AutoI18NEditor
 	#editorSubscibe: ReturnType<typeof createSubscriber>
 	#editorChange = () => {}
+	get isEditorShown() {
+		this.#editorSubscibe()
+		return !!this.#editor
+	}
 
 	#lang: string
 	#langSubscribe: ReturnType<typeof createSubscriber>
 	#langChange = () => {}
+	get lang() {
+		this.#langSubscribe()
+		return this.#lang
+	}
 
 	#cache = new Map<string, Record<string, string>>()
 	#cacheSubscribe: ReturnType<typeof createSubscriber>
 	#cacheChange = () => {}
 
 	#supportedLangs: string[]
+	get supportedLangs() {
+		return this.#supportedLangs
+	}
+
 	#fallbackLang: string
+	get fallbackLang() {
+		return this.#fallbackLang
+	}
 
 	#loadedCategories = new Set<string>()
 	#failedCategories = new Set<string>()
 	#inFlight = new Set<string>()
+	get loadedCategories() {
+		return this.#loadedCategories.values()
+	}
 
 	#keysInUse = new Set<string>()
 	get keysInUse(): IteratorObject<[category: string, key: string]> {
@@ -56,6 +77,8 @@ export class AutoI18N {
 		fallbackLang,
 		preload,
 		fetch = globalThis.fetch,
+		//! HACK by default we always start in "ssr" mode to not break hydration
+		mode = "ssr",
 	}: AutoI18NConstructorOptions) {
 		this.#lang = typeof lang == "string" ? lang : lang()
 		this.#supportedLangs = Array.isArray(supportedLangs) ? supportedLangs : supportedLangs()
@@ -90,24 +113,9 @@ export class AutoI18N {
 			this.#langChange = update
 		})
 
+		this.mode = mode
+
 		if (preload) this.loadAll({ categories: preload, langs: [this.#lang, this.#fallbackLang] })
-	}
-
-	get lang() {
-		this.#langSubscribe()
-		return this.#lang
-	}
-
-	get supportedLangs() {
-		return this.#supportedLangs
-	}
-
-	get fallbackLang() {
-		return this.#fallbackLang
-	}
-
-	get loadedCategories() {
-		return this.#loadedCategories.values()
 	}
 
 	async load(category: string, { lang = this.#lang, skipIfCached = false } = {}) {
@@ -136,6 +144,9 @@ export class AutoI18N {
 		} else {
 			this.#loadedCategories.add(category)
 			this.#cache.set(cacheKey, data)
+
+			//! switch to "normal" mode after first render to not break hydration
+			this.mode = "normal"
 		}
 		this.#cacheChange()
 	}
@@ -188,7 +199,7 @@ export class AutoI18N {
 			values = {},
 		} = options
 
-		// !HACK geez I sure wish I had a record or a tuple...
+		//! HACK geez I sure wish I had a record or a tuple...
 		if (category != "auto-i18n") this.#keysInUse.add(JSON.stringify([category, key]))
 
 		this.#cacheSubscribe()
@@ -198,6 +209,15 @@ export class AutoI18N {
 
 		const translations = this.#cache.get(cacheKey)
 		if (!translations && autoload) this.load(category, { lang })
+
+		if (this.mode == "ssr") {
+			// In SSR we start the load and return a value to be replaced before sending HTML to client
+			return (
+				"%auto-i18n.t(" +
+				JSON.stringify([lang, category, key, options]).replaceAll(")%", "__auto-i18n__sentinel__") +
+				")%"
+			)
+		}
 
 		let text = translations?.[key]
 		if (text == undefined) {
@@ -356,11 +376,6 @@ export class AutoI18N {
 	withDefaults(defaultOpts: TOptions): typeof this.t {
 		return (category: string, key: string, opts: TOptions = {}) =>
 			this.t(category, key, { ...defaultOpts, ...opts })
-	}
-
-	get isEditorShown() {
-		this.#editorSubscibe()
-		return !!this.#editor
 	}
 
 	async showEditor({ autoload = false } = {}) {

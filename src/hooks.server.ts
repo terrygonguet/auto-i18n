@@ -1,8 +1,8 @@
 import { i18nHandler } from "$minilib/i18n/index.js"
+import { redirect } from "@sveltejs/kit"
+import { sequence } from "@sveltejs/kit/hooks"
 
-export const handle = async ({ resolve, event }) => {
-	const i18nResult = await i18nHandler(event)
-	if (i18nResult.handled) return i18nResult.response
-
-	return resolve(event)
-}
+export const handle = sequence(i18nHandler, ({ event, resolve }) => {
+	if (event.url.pathname == "/favicon.ico") redirect(308, "/favicon.svg")
+	else return resolve(event)
+})
