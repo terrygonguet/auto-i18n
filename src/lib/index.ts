@@ -7,7 +7,7 @@ export interface AutoI18NConstructorOptions {
 	supportedLangs: string[] | (() => string[])
 	fallbackLang: string | (() => string)
 	preload?: string[]
-	fetch: typeof fetch
+	fetch?: typeof fetch
 	mode?: AutoI18N["mode"]
 }
 
