@@ -25,7 +25,7 @@ export type TValue =
 	| boolean
 	| { prefix?: string; visible: string | number | boolean; suffix?: string }
 
-export class AutoI18N {
+export class AutoI18N<T extends { [category: string]: string } = Record<string, string>> {
 	fetch: typeof fetch
 	mode: "normal" | "ssr"
 
@@ -118,7 +118,7 @@ export class AutoI18N {
 		if (preload) this.loadAll({ categories: preload, langs: [this.#lang, this.#fallbackLang] })
 	}
 
-	async load(category: string, { lang = this.#lang, skipIfCached = false } = {}) {
+	async load(category: Extract<keyof T, string>, { lang = this.#lang, skipIfCached = false } = {}) {
 		const cacheKey = lang + "." + category
 		if (
 			this.#failedCategories.has(cacheKey) ||
@@ -151,7 +151,7 @@ export class AutoI18N {
 		this.#cacheChange()
 	}
 
-	async loadAll({ categories, langs }: { categories?: string[]; langs?: string[] } = {}) {
+	async loadAll({ categories, langs }: { categories?: (keyof T)[]; langs?: string[] } = {}) {
 		const search = new URLSearchParams()
 		if (categories?.length) search.set("categories", categories.join(","))
 		if (langs?.length) search.set("langs", langs.join(","))
@@ -190,7 +190,11 @@ export class AutoI18N {
 	get t() {
 		return this.translate
 	}
-	translate(category: string, key: string, options: TOptions = {}): string {
+	translate<Category extends Extract<keyof T, string>, Key extends T[Category]>(
+		category: Category,
+		key: Key,
+		options: TOptions = {},
+	): string {
 		const {
 			autoload = true,
 			editor = true,
@@ -241,9 +245,9 @@ export class AutoI18N {
 			: text
 	}
 
-	raw(
-		category: string,
-		key: string,
+	raw<Category extends Extract<keyof T, string>, Key extends T[Category]>(
+		category: Category,
+		key: Key,
 		{ lang = this.#lang, autoload = false }: Pick<TOptions, "lang" | "autoload"> = {},
 	) {
 		this.#cacheSubscribe()
@@ -253,7 +257,7 @@ export class AutoI18N {
 	}
 
 	rawCategory(
-		category: string,
+		category: Extract<keyof T, string>,
 		{ lang = this.#lang, autoload = false, includeFallback = false } = {},
 	) {
 		this.#cacheSubscribe()
@@ -289,7 +293,7 @@ export class AutoI18N {
 			let match: RegExpExecArray | null = null
 			if ((match = AutoI18N.#regex_$t.exec(expr))) {
 				const { category, key, lang = this.#lang } = match.groups!
-				value = this.t(category, key, { ...options, editor: false, values, lang })
+				value = this.t<any, any>(category, key, { ...options, editor: false, values, lang })
 			} else if ((match = AutoI18N.#regex_$match.exec(expr))) {
 				const { varname, patterns } = match.groups!
 				const matches = Array.from(patterns.matchAll(/(?<amount>[\w_]):/g))
@@ -374,8 +378,7 @@ export class AutoI18N {
 	}
 
 	withDefaults(defaultOpts: TOptions): typeof this.t {
-		return (category: string, key: string, opts: TOptions = {}) =>
-			this.t(category, key, { ...defaultOpts, ...opts })
+		return (category, key, opts = {}) => this.t(category, key, { ...defaultOpts, ...opts })
 	}
 
 	async showEditor({ autoload = false } = {}) {
