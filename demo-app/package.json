@@ -39,7 +39,7 @@
 		"vite": "^8.0.2"
 	},
 	"dependencies": {
-		"@terrygonguet/svelte-i18n": "file:..",
+		"@terrygonguet/svelte-i18n": "..",
 		"@terrygonguet/utils": "^0.11.0",
 		"better-sqlite3": "^12.8.0",
 		"drizzle-orm": "^0.45.1"
