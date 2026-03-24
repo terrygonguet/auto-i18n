@@ -23,6 +23,8 @@ import { sequence } from "@sveltejs/kit/hooks"
 import { createSvelteI18NHandle } from "@terrygonguet/svelte-i18n/server"
 
 const i18nHandle = createSvelteI18NHandle({
+	supportedLangs: ["en", "fr", ...],
+	fallbackLang: "en",
 	fetchCategory,
 	canFetchCategory,
 	fetchAll,
@@ -39,27 +41,30 @@ export const handle = sequence(i18nHandle, ({ event, resolve }) => {
 
 You probably want to run this function after your session/authentication but before the rest of SvelteKit.
 
-All the values passed to the `createSvelteI18NHandle` function are functions too. Those whose name start with "can" are guards, allowing you to grant or deny access to any part of the generated routes. The other functions are here to transfer data from your storage solution to the format that `svelte-i18n` expects. Please refer to the [API](#api) section for details.
+Appart from the apropriately named `supportedLangs` and `fallbackLang` parameters, all the values passed to the `createSvelteI18NHandle` function are functions too. Those whose name start with "can" are guards, allowing you to grant or deny access to any part of the generated routes. The other functions are here to transfer data from your storage solution to the format that `svelte-i18n` expects. Please refer to the [API](#api) section for details.
 
 ### Client {#usage-client}
 
 The client side is more involved. Fundamentally, all you have to do is create an instance of the `SvelteI18N` class and pass it around. Your components can then use the `translate()` (aliased to `t()`) method to display the translation strings.
 
-As usual, everything gets more complex when we take SSR into account. The recommended flow is to have a `layout.server.ts` file to resolve which language to display to the user; a `layout.ts` file to create the `SvelteI18N` instance that will be available throughout your application and now you can use [`page.data`](https://svelte.dev/docs/kit/@sveltejs-kit#Page) or [`$props().data`](https://svelte.dev/docs/kit/load#Page-data) (for pages) to get your translation strings anywhere.
+As usual, everything gets more complex when we take SSR into account. The recommended flow is to have a `+layout.server.ts` file to resolve which language to display to the user; a `+layout.ts` file to create the `SvelteI18N` instance that will be available throughout your application.
 
-```ts filename=layout.server.ts
+```ts filename=+layout.server.ts
 export const load = async ({ cookies, request }) => {
-	// do whatever you want to get the user's language settings
+	// do whatever you want on the server to get the user's language settings
 	return { lang, supportedLangs, fallbackLang }
 }
 ```
 
-```ts filename=layout.ts
+```ts filename=+layout.ts
 export const load = async ({ fetch, data: { lang, supportedLangs, fallbackLang } }) => {
+	// now we can create an instance the same way for both SSR and the client
 	const i18n = new SvelteI18N({ lang, supportedLangs, fallbackLang, fetch })
 	return { i18n, t: i18n.t.bind(i18n), c: i18n.c.bind(i18n) }
 }
 ```
+
+Now you can use [`page.data`](https://svelte.dev/docs/kit/@sveltejs-kit#Page) or [`$props().data`](https://svelte.dev/docs/kit/load#Page-data) (for pages) to get your translation strings anywhere.
 
 ```html filename=+page.svelte
 <script lang="ts">
