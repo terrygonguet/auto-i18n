@@ -1,6 +1,6 @@
 import { safe } from "@terrygonguet/utils/result"
 import { safeParse } from "@terrygonguet/utils/json"
-import { navigating, page } from "$app/stores"
+import { page } from "$app/stores"
 import { createSubscriber } from "svelte/reactivity"
 import type { SvelteI18NEditor, SvelteI18NEditorConfig } from "./editor.svelte"
 import type { Translations } from "./server.js"
