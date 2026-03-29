@@ -1,10 +1,11 @@
 import { env } from "$env/dynamic/private"
+import { setSSRLang } from "$minilib/i18n/index.js"
 import { redirect } from "@sveltejs/kit"
 
 const supportedLangs = env.SUPPORTED_LANGS?.split(",") ?? ["en"]
 const fallbackLang = env.FALLBACK_LANG ?? "en"
 
-export const load = async ({ cookies, request }) => {
+export async function load({ cookies, request }) {
 	const url = new URL(request.url)
 	const forceLang = url.searchParams.get("force-lang")
 	if (forceLang && supportedLangs.includes(forceLang)) {
@@ -14,14 +15,14 @@ export const load = async ({ cookies, request }) => {
 	}
 
 	const fromCookies = cookies.get("lang")
-	if (fromCookies) return { lang: fromCookies, supportedLangs, fallbackLang }
+	if (fromCookies) return setSSRLang(request, fromCookies)
 	else {
 		const header = request.headers.get("Accept-Language") ?? ""
 		const candidates = header.replaceAll(/\s/g, "").split(",")
 		for (const candidate of candidates) {
 			const [lang] = candidate.trim().toLowerCase().split(";", 1)
-			if (supportedLangs.includes(lang)) return { lang, supportedLangs, fallbackLang }
+			if (supportedLangs.includes(lang)) return setSSRLang(request, fallbackLang)
 		}
-		return { lang: fallbackLang, supportedLangs, fallbackLang }
+		return setSSRLang(request, fallbackLang)
 	}
 }

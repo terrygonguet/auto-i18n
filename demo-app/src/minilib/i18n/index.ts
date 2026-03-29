@@ -1,7 +1,8 @@
+import { dev } from "$app/environment"
 import { env } from "$env/dynamic/private"
 import { db, schema } from "$minilib/db/index.js"
 import {
-	createSvelteI18NHandle,
+	createSvelteI18NServerBundle,
 	type CreateSvelteI18NHandlerOptions,
 } from "@terrygonguet/svelte-i18n/server"
 import { and, eq, inArray, sql } from "drizzle-orm"
@@ -83,10 +84,15 @@ const update: CreateSvelteI18NHandlerOptions["update"] = async ({ category, key,
 		.run()
 }
 
-export const i18nHandle = createSvelteI18NHandle({
+const { handle: i18nHandle, setSSRLang } = createSvelteI18NServerBundle({
 	supportedLangs: env.SUPPORTED_LANGS.split(","),
 	fallbackLang: env.FALLBACK_LANG,
 	fetchCategory,
 	fetchAll,
 	update,
+	canUpdate() {
+		return dev
+	},
 })
+
+export { i18nHandle, setSSRLang }

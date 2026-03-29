@@ -16,13 +16,13 @@ Like a bikini, `svelte-i18n` comes in two parts: [client](#usage-client) and [se
 
 ### Server {#usage-server}
 
-On the server most of the business happens in the `hooks.server.ts` file. You can import the `createSvelteI18NHandle` function from `@terrygonguet/svelte-i18n/server` and use it to create the titular handle function. This function is a fully self contained [handle](https://svelte.dev/docs/kit/@sveltejs-kit#Handle) hook and can be added to your app via the [sequence](https://svelte.dev/docs/kit/@sveltejs-kit-hooks#sequence) function.
+On the server most of the business happens in the `hooks.server.ts` file. You can import the `createSvelteI18NServerBundle` function from `@terrygonguet/svelte-i18n/server` and use it to create the titular handle function. This function is a fully self contained [handle](https://svelte.dev/docs/kit/@sveltejs-kit#Handle) hook and can be added to your app via the [sequence](https://svelte.dev/docs/kit/@sveltejs-kit-hooks#sequence) function.
 
 ```ts filename=hooks.server.ts
 import { sequence } from "@sveltejs/kit/hooks"
-import { createSvelteI18NHandle } from "@terrygonguet/svelte-i18n/server"
+import { createSvelteI18NServerBundle } from "@terrygonguet/svelte-i18n/server"
 
-const i18nHandle = createSvelteI18NHandle({
+const { handle: i18nHandle, setSSRLang } = createSvelteI18NServerBundle({
 	supportedLangs: ["en", "fr", ...],
 	fallbackLang: "en",
 	fetchCategory,
@@ -37,11 +37,13 @@ export const handle = sequence(i18nHandle, ({ event, resolve }) => {
 	// do your hook stuff
 	return resolve(event)
 })
+
+export { setSSRLang }
 ```
 
 You probably want to run this function after your session/authentication but before the rest of SvelteKit.
 
-Appart from the apropriately named `supportedLangs` and `fallbackLang` parameters, all the values passed to the `createSvelteI18NHandle` function are functions too. Those whose name start with "can" are guards, allowing you to grant or deny access to any part of the generated routes. The other functions are here to transfer data from your storage solution to the format that `svelte-i18n` expects. Please refer to the [API](#api) section for details.
+Appart from the apropriately named `supportedLangs` and `fallbackLang` parameters, all the values passed to the `createSvelteI18NServerBundle` function are functions too. Those whose name start with "can" are guards, allowing you to grant or deny access to any part of the generated routes. The other functions are here to transfer data from your storage solution to the format that `svelte-i18n` expects. Please refer to the [API](#api) section for details.
 
 ### Client {#usage-client}
 
@@ -50,16 +52,18 @@ The client side is more involved. Fundamentally, all you have to do is create an
 As usual, everything gets more complex when we take SSR into account. The recommended flow is to have a `+layout.server.ts` file to resolve which language to display to the user; a `+layout.ts` file to create the `SvelteI18N` instance that will be available throughout your application.
 
 ```ts filename=+layout.server.ts
+import { setSSRLang } from "../hooks.server.ts"
+
 export const load = async ({ cookies, request }) => {
 	// do whatever you want on the server to get the user's language settings
-	return { lang, supportedLangs, fallbackLang }
+	return setSSRLang(request, "en")
 }
 ```
 
 ```ts filename=+layout.ts
 export const load = async ({ fetch, data: { lang, supportedLangs, fallbackLang } }) => {
 	// now we can create an instance the same way for both SSR and the client
-	const i18n = new SvelteI18N({ lang, supportedLangs, fallbackLang, fetch })
+	const i18n = new SvelteI18N({ lang, supportedLangs, fallbackLang, fetch, mode: "ssr" })
 	return { i18n, t: i18n.t.bind(i18n), c: i18n.c.bind(i18n) }
 }
 ```
@@ -148,8 +152,8 @@ This is possible because of Svelte's [{@html ...} tag](https://svelte.dev/docs/s
 - `options.lang: string` - the language in which to diplay your app to the user
 - `options.supportedlangs: string[]` - a list of all the languages supported by your app
 - `options.fallbackLang: string` - the language to use if a translation isn't available in the current language or if we tried to use an unsupported language
-- `options.preload: string[]` - a list of categories to start loading immediately. Does not block the constructor (ie: the tranlations will not be synchronously available)
 - `options.fetch: typeof fetch` - a fetch function for your environment. Typically supplied by SvelteKit in the `layout.ts` or `layout.server.ts` `load` functions
+- `options.mode: "ssr" | "browser"` - what mode to start in
 
 #### `lang: string`
 
@@ -170,6 +174,15 @@ Read only iterator listing the loaded categories.
 #### `isEditorShown: boolean`
 
 Read only boolean indicating whether the editor is displayed or not.
+
+#### `mode: "ssr" | "browser"`
+
+What mode we are in:
+
+- `"browser"` is the normal mode where calls to `translate()` will work as expected and load missing data
+- `"ssr"` mode makes calls to `translate()` return serialized arguments to be replaced later by the server handle
+
+When creating a `SvelteI18N` object in `"ssr"` mode in the browser, it will load serialized data synchronously from the HTML then switch to `"browser"` mode once SvelteKit is done hydrating the page. This behavior is useful when in a hybrid `+layout.ts` file: on the server the mode will remain `"ssr"` and on the browser it will stay in `"ssr"` mode long enough to not break SvelteKit hydration then switch to do what you would expect.
 
 #### `load(category: string, options): Promise<void>`
 
@@ -249,7 +262,7 @@ Loads and mounts the editor component. See the section on [the editor](#editor) 
 
 Hides and unmounts the editor component.
 
-### `createSvelteI18NHandle` from `@terrygonguet/svelte-i18n/server`
+### `createSvelteI18NServerBundle` from `@terrygonguet/svelte-i18n/server`
 
 Helper function to create a single handler that behaves like registering multiple API endpoints. The function takes an object of hooks that will be called to interact with your system.
 
