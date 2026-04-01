@@ -3,15 +3,10 @@
 	"version": "0.2.0-beta.2",
 	"license": "MIT",
 	"scripts": {
-		"dev": "vite dev",
+		"dev": "nodemon --exec \"npm run build\" --watch src --ext ts,svelte,html",
 		"build": "vite build && npm run prepack",
-		"preview": "vite preview",
 		"prepare": "svelte-kit sync || echo ''",
-		"prepack": "svelte-kit sync && svelte-package && publint",
-		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
-		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
-		"format": "prettier --write .",
-		"lint": "prettier --check ."
+		"prepack": "svelte-kit sync && svelte-package && publint"
 	},
 	"files": [
 		"dist",
@@ -50,12 +45,13 @@
 		"@rollup/pluginutils": "^5.3.0",
 		"@sveltejs/package": "^2.5.7",
 		"@sveltejs/vite-plugin-svelte": "^7.0.0",
+		"nodemon": "^3.1.14",
 		"prettier": "^3.8.1",
 		"prettier-plugin-svelte": "^3.5.1",
 		"publint": "^0.3.18",
-		"svelte-check": "^4.4.5",
+		"svelte-check": "^4.4.6",
 		"typescript": "^5.9.3",
-		"vite": "^8.0.2"
+		"vite": "^8.0.3"
 	},
 	"dependencies": {
 		"@terrygonguet/utils": "^0.11.0"

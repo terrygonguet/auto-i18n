@@ -6,12 +6,7 @@
 	"scripts": {
 		"dev": "vite dev",
 		"build": "vite build",
-		"preview": "vite preview",
-		"prepare": "svelte-kit sync || echo ''",
-		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
-		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
-		"format": "prettier --write .",
-		"lint": "prettier --check ."
+		"preview": "vite preview"
 	},
 	"type": "module",
 	"devDependencies": {
@@ -23,6 +18,7 @@
 		"@tailwindcss/typography": "^0.5.19",
 		"@tailwindcss/vite": "^4.2.2",
 		"@types/better-sqlite3": "^7.6.13",
+		"dotenv": "^17.3.1",
 		"drizzle-kit": "^0.31.10",
 		"highlight.js": "^11.11.1",
 		"marked": "^17.0.5",
@@ -32,17 +28,17 @@
 		"prettier-plugin-svelte": "^3.5.1",
 		"prettier-plugin-tailwindcss": "^0.7.2",
 		"publint": "^0.3.18",
-		"svelte": "^5.55.0",
-		"svelte-check": "^4.4.5",
+		"svelte": "^5.55.1",
+		"svelte-check": "^4.4.6",
 		"tailwindcss": "^4.2.2",
 		"typescript": "^5.9.3",
-		"vite": "^8.0.2"
+		"vite": "^8.0.3"
 	},
 	"dependencies": {
 		"@terrygonguet/svelte-i18n": "..",
 		"@terrygonguet/utils": "^0.11.0",
 		"better-sqlite3": "^12.8.0",
-		"drizzle-orm": "^0.45.1"
+		"drizzle-orm": "^0.45.2"
 	},
 	"keywords": [
 		"svelte",

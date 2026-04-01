@@ -6,9 +6,15 @@ import { Marked } from "marked"
 import customHeadingId from "marked-custom-heading-id"
 import { markedHighlight } from "marked-highlight"
 import hljs from "highlight.js"
+import { config } from "dotenv"
+
+config()
 
 export default defineConfig({
 	plugins: [tailwindcss(), transformMD(), sveltekit()],
+	server: {
+		port: parseInt(process.env.PORT!) || undefined,
+	},
 })
 
 function transformMD(): Plugin {
