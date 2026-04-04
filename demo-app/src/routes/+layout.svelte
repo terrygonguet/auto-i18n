@@ -5,28 +5,33 @@
 	import globeSrc from "$assets/globe.svg"
 	import type { LayoutData } from "./$types.js"
 	import { invalidate } from "$app/navigation"
+	import { dev } from "$app/environment"
+	import { on } from "svelte/events"
 
 	let { children } = $props()
 
 	let { i18n, t } = $derived(page.data) as LayoutData
 	let segment = $derived(page.route.id)
 
-	function onLangChange(lang: string) {
-		i18n.setLang(lang)
+	async function onLangChange(lang: string) {
 		const expires = new Date(3000, 0, 1)
 		document.cookie = `lang=${lang};expires=${expires.toUTCString()}`
-		invalidate((url) => url.protocol == "content:")
+		await i18n.setLang(lang)
+		await invalidate((url) => url.protocol == "content:")
 	}
 
-	function onKeydown(evt: KeyboardEvent) {
-		if (evt.code == "Backslash" && evt.ctrlKey && evt.shiftKey) {
-			if (i18n.isEditorShown) i18n.hideEditor()
-			else i18n.showEditor()
-		}
+	if (dev) {
+		$effect(() => {
+			const off = on(document.body, "keydown", (evt: KeyboardEvent) => {
+				if (evt.code == "Backslash" && evt.ctrlKey && evt.shiftKey) {
+					if (i18n.isEditorShown) i18n.hideEditor()
+					else i18n.showEditor()
+				}
+			})
+			return () => off()
+		})
 	}
 </script>
-
-<svelte:body onkeydown={onKeydown} />
 
 <header class="border-b border-stone-300 bg-stone-100 text-2xl">
 	<nav class="p-8">
@@ -34,12 +39,12 @@
 			<li>
 				<a href="/" class="flex items-center gap-2 p-6" class:underline={segment == "/"}>
 					<img class="h-7" src={iconSrc} aria-hidden="true" alt="🖍" />
-					{@html t("nav", "link_home")}
+					{@html await t("nav", "link_home")}
 				</a>
 			</li>
 			<li>
 				<a href="/docs" class="block p-6" class:underline={segment == "/docs"}>
-					{@html t("nav", "link_docs")}
+					{@html await t("nav", "link_docs")}
 				</a>
 			</li>
 		</ul>
@@ -50,7 +55,7 @@
 
 <footer class="flex items-center justify-center gap-6 border-t border-stone-300 bg-stone-100 p-10">
 	<p>
-		{@html t("footer", "made_by", {
+		{@html await t("footer", "made_by", {
 			values: {
 				name: {
 					prefix: `<a href="https://terry.gonguet.com" target="_blank" class="text-teal-700 underline">`,
@@ -66,7 +71,9 @@
 		<img class="h-5" src={globeSrc} alt="Globe icon" />
 		<select bind:value={() => i18n.lang, onLangChange} class="border border-teal-500 px-1 py-0.5">
 			{#each i18n.supportedLangs as lang}
-				<option value={lang}>{@html t("general", "langlang_" + lang, { editor: false })}</option>
+				<option value={lang}>
+					{@html await t("general", "langlang_" + lang, { editor: false })}
+				</option>
 			{/each}
 		</select>
 	</p>

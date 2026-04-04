@@ -4,16 +4,16 @@
 	import { fade } from "svelte/transition"
 
 	let { data } = $props()
-	let { i18n } = $derived(data)
+	let { i18n, c, t } = $derived(data)
 </script>
 
 <svelte:head>
-	<title>{i18n.t("docs", "page_title", { editor: false })}</title>
+	<title>{await t("docs", "page_title", { editor: false })}</title>
 </svelte:head>
 
 <main in:fade={fadeParams.in} out:fade={fadeParams.out} class="py-12">
 	<div class="prose mx-auto w-full">
-		{@html i18n.c(data.content, {
+		{@html c(data.content, {
 			url: `https://github.com/terrygonguet/svelte-i18n/blob/main/src/content/${i18n.lang}/docs.md`,
 		})}
 	</div>
