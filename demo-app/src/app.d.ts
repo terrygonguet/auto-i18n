@@ -4,7 +4,7 @@ declare global {
 	namespace App {
 		// interface Error {}
 		interface Locals {
-			i18n: SvelteI18N
+			lang: string
 		}
 		// interface PageData {}
 		// interface PageState {}

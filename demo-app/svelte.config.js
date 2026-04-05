@@ -10,10 +10,12 @@ const config = {
 	kit: {
 		adapter: adapter(),
 		alias: {
-			"$minilib/*": "src/minilib/*",
 			"$assets/*": "assets/*",
 			"$content/*": "src/content/*",
 			"$$/styles.css": "src/styles.css",
+		},
+		experimental: {
+			remoteFunctions: true,
 		},
 	},
 }

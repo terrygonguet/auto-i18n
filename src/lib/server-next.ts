@@ -17,81 +17,104 @@ export type Translations = { [lang: string]: TranslationLanguage }
 
 export interface CreateSvelteI18NServerBundleOptions {
 	getLang?(event: RequestEvent): MaybePromise<string>
-	fetchData(options: {
+
+	fetchCategory(options: {
+		where: { lang: string; category: string }
+		event: RequestEvent
+	}): MaybePromise<TranslationCategory | undefined>
+	canFetchCategory?(options: {
+		where: { lang: string; category: string }
+		event: RequestEvent
+	}): MaybePromise<boolean>
+
+	fetchAll(options: {
 		where: { langs?: string[]; categories?: string[] }
 		event: RequestEvent
 	}): MaybePromise<Translations | undefined>
-	updateData?(
+	canFetchAll?(options: {
+		where: { langs?: string[]; categories?: string[] }
+		event: RequestEvent
+	}): MaybePromise<boolean>
+
+	update(
 		data: { category: string; key: string; langs: { [lang: string]: string } },
-		event: RequestEvent,
+		options: { event: RequestEvent },
 	): MaybePromise<void>
+	canUpdate?(
+		data: { category: string; key: string; langs: { [lang: string]: string } },
+		options: { event: RequestEvent },
+	): MaybePromise<boolean>
 }
 
 export interface SvelteI18NServerBundle {
 	fetchCategory: RemoteQueryFunction<{ lang: string; category: string }, TranslationCategory>
 	fetchAll: RemoteQueryFunction<{ langs?: string[]; categories?: string[] }, Translations>
-	updateKey: RemoteCommand<
-		{ category: string; key: string; langs: { [lang: string]: string } },
-		Promise<Translations>
-	>
+	update: RemoteCommand<{ category: string; key: string; langs: { [lang: string]: string } }, void>
 	handle: Handle
 }
 
 export function createSvelteI18NServerBundle({
 	getLang,
-	fetchData,
-	updateData,
+	fetchCategory,
+	canFetchCategory,
+	fetchAll,
+	canFetchAll,
+	update,
+	canUpdate,
 }: CreateSvelteI18NServerBundleOptions): SvelteI18NServerBundle {
-	const fetchCategory = query.batch(fetchCategoryValidator, async (inputs) => {
-		const event = getRequestEvent()
-		const langs: string[] = []
-		const categories: string[] = []
-		for (const input of inputs) {
-			if (langs.indexOf(input.lang) == -1) langs.push(input.lang)
-			if (categories.indexOf(input.category) == -1) categories.push(input.category)
-		}
-
-		const [err, data] = await safe(async () =>
-			fetchData({ where: { categories, langs }, event }),
-		).asTuple()
-
-		if (err) error(500, "svelte-i18n.error_get_fail")
-		else if (!data) error(404, "svelte-i18n.error_not_found")
-
-		return ({ lang, category }) => {
-			const translations = data[lang]?.[category] ?? null
-			if (!translations) error(404, "svelte-i18n.error_not_found")
-
-			return translations
-		}
-	})
-
-	const fetchAll = query(fetchAllValidator, async ({ langs, categories }) => {
-		const event = getRequestEvent()
-		const [err, data] = await safe(async () =>
-			fetchData({ where: { categories, langs }, event }),
-		).asTuple()
-
-		if (err) error(500, "svelte-i18n.error_get_fail")
-		else if (!data) error(404, "svelte-i18n.error_not_found")
-		else return data
-	})
-
-	const updateKey = command(updateValidator, async ({ category, key, langs }) => {
-		if (!updateData) error(503, "svelte-i18n.error_save_unavailable")
-
-		const [err] = await safe(async () =>
-			updateData({ category, key, langs }, getRequestEvent()),
-		).asTuple()
-
-		if (err) error(503, "svelte-i18n.error_save_fail")
-		else return fetchAll({ langs: Object.keys(langs), categories: [category] })
-	})
-
+	//! HACK: stringified `where` is the key and the full response object is the value
+	const cache = new Map<string, any>()
 	return {
-		fetchCategory,
-		fetchAll,
-		updateKey,
+		fetchCategory: query(fetchCategoryValidator, async ({ lang, category }) => {
+			const event = getRequestEvent()
+			if (canFetchCategory ? !canFetchCategory({ where: { lang, category }, event }) : false)
+				error(403, "svelte-i18n.error_access_denied")
+
+			const cacheKey = JSON.stringify({ lang, category })
+			const cached = cache.get(cacheKey)
+			if (cached) return cached
+
+			const [err, data] = await safe(async () =>
+				fetchCategory({ where: { lang, category }, event }),
+			).asTuple()
+			if (err) error(500, "svelte-i18n.error_get_fail")
+			else if (!data) error(404, "svelte-i18n.error_not_found")
+			else {
+				cache.set(cacheKey, data)
+				return data
+			}
+		}),
+		fetchAll: query(fetchAllValidator, async ({ langs, categories }) => {
+			const event = getRequestEvent()
+			if (canFetchAll ? !canFetchAll({ where: { langs, categories }, event }) : false)
+				error(403, "svelte-i18n.error_access_denied")
+
+			const cacheKey = JSON.stringify({ langs, categories })
+			const cached = cache.get(cacheKey)
+			if (cached) return cached
+
+			const [err, data] = await safe(async () =>
+				fetchAll({ where: { categories, langs }, event }),
+			).asTuple()
+			if (err) error(500, "svelte-i18n.error_get_fail")
+			else if (!data) error(404, "svelte-i18n.error_not_found")
+			else {
+				cache.set(cacheKey, data)
+				return data
+			}
+		}),
+		update: command(updateValidator, async ({ category, key, langs }) => {
+			const event = getRequestEvent()
+			if (canUpdate ? !canUpdate({ category, key, langs }, { event }) : false)
+				error(403, "svelte-i18n.error_access_denied")
+
+			const { error: err } = await safe(async () =>
+				update({ category, key, langs }, { event }),
+			).asObject()
+			if (err) error(503, "svelte-i18n.error_save_fail")
+			//! HACK: just nuke the cache on update
+			else cache.clear()
+		}),
 		async handle({ event, resolve }) {
 			if (!getLang) return resolve(event)
 			const lang = await getLang(event)

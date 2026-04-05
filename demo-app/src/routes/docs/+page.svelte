@@ -1,6 +1,6 @@
 <script lang="ts">
 	import "highlight.js/styles/vs2015.min.css"
-	import { fadeParams } from "$minilib/transition.js"
+	import { fadeParams } from "$lib/transition.js"
 	import { fade } from "svelte/transition"
 
 	let { data } = $props()

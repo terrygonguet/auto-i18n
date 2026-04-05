@@ -1,4 +1,4 @@
-import { i18nHandle } from "$minilib/i18n/index.js"
+import { handle as i18nHandle } from "./lib/server/i18n/index.js"
 import { redirect } from "@sveltejs/kit"
 import { sequence } from "@sveltejs/kit/hooks"
 

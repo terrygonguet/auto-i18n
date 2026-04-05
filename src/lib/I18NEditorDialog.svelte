@@ -24,7 +24,6 @@
 </script>
 
 <script lang="ts">
-	import { safe } from "@terrygonguet/utils/result"
 	import { getContext, tick, untrack } from "svelte"
 	import I18NEditorContent from "./I18NEditorContent.svelte"
 	import I18NEditorOnSign from "./I18NEditorOnSign.svelte"
@@ -115,25 +114,8 @@
 		key: string,
 		langs: { [lang: string]: string },
 	) {
-		const [err, response] = await safe(() =>
-			fetch("/locale/all.json", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ category, key, langs }),
-			}),
-		)
-			.andThen((res) => res.json())
-			.asTuple()
-
-		if (err) console.error(err)
-		else if (
-			response &&
-			typeof response == "object" &&
-			response.message == "svelte-i18n.update_success"
-		) {
-			i18n.loadAll().then(() => onChange?.())
-			dialogEl.close()
-		}
+		await i18n.update({ category, key, langs })
+		onChange?.()
 	}
 
 	function onSeeAllClick() {

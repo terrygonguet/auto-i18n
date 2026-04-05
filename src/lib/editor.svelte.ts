@@ -27,6 +27,9 @@ export class SvelteI18NEditor {
 	constructor(i18n: SvelteI18N, { autoload = false } = {}) {
 		this.i18n = i18n
 
+		// TODO notify user somehow?
+		this.i18n.loadAll().catch(console.error)
+
 		const off = on(
 			document,
 			"click",
