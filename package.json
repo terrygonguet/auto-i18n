@@ -1,6 +1,6 @@
 {
 	"name": "@terrygonguet/svelte-i18n",
-	"version": "1.0.0-gamma.1",
+	"version": "1.0.0-gamma.2",
 	"license": "MIT",
 	"scripts": {
 		"dev": "nodemon --exec \"npm run build\" --watch src --ext ts,svelte,html",
