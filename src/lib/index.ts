@@ -10,6 +10,7 @@ export interface SvelteI18NConstructorOptions {
 	fetchCategory: SvelteI18NServerBundle["fetchCategory"]
 	fetchAll?: SvelteI18NServerBundle["fetchAll"]
 	updateKey?: SvelteI18NServerBundle["updateKey"]
+	logger?: SvelteI18N["logger"]
 }
 
 export interface TOptions {
@@ -71,6 +72,11 @@ export class SvelteI18N<T extends { [category: string]: string } = any> {
 		return !!this.#editor
 	}
 
+	logger: {
+		warn(message: string, details: any): void
+		error(message: string, details: any, error: Error): void
+	}
+
 	constructor({
 		lang,
 		supportedLangs,
@@ -78,13 +84,15 @@ export class SvelteI18N<T extends { [category: string]: string } = any> {
 		fetchCategory,
 		fetchAll,
 		updateKey,
+		logger = console,
 	}: SvelteI18NConstructorOptions) {
 		this.#lang = typeof lang == "string" ? lang : lang()
 		this.#supportedLangs = Array.isArray(supportedLangs) ? supportedLangs : supportedLangs()
 		this.#fallbackLang = typeof fallbackLang == "string" ? fallbackLang : fallbackLang()
+		this.logger = logger
 
 		if (!this.#supportedLangs.includes(this.#lang)) {
-			console.warn(
+			this.logger.warn(
 				"[svelte-i18n] The selected language is not in the list of supported languages, falling back",
 				{
 					lang: this.#lang,
@@ -96,7 +104,7 @@ export class SvelteI18N<T extends { [category: string]: string } = any> {
 		}
 
 		if (!this.#supportedLangs.includes(this.#fallbackLang)) {
-			console.warn(
+			this.logger.warn(
 				"[svelte-i18n] The fallback language is not in the list of supported languages",
 				{
 					fallbackLang: this.#fallbackLang,
@@ -125,7 +133,7 @@ export class SvelteI18N<T extends { [category: string]: string } = any> {
 		const [err, data] = await safe(async () => this.#fetchCategory!({ lang, category })).asTuple()
 
 		if (err) {
-			console.error("[svelte-i18n] Failed to load translations", { category, lang }, err)
+			this.logger.error("[svelte-i18n] Failed to load translations", { category, lang }, err)
 			return null
 		} else {
 			this.#cache.set(cacheKey, data)
@@ -142,7 +150,7 @@ export class SvelteI18N<T extends { [category: string]: string } = any> {
 		).asTuple()
 
 		if (err) {
-			console.error("[svelte-i18n] Failed to load all translations", { langs }, err)
+			this.logger.error("[svelte-i18n] Failed to load all translations", { langs }, err)
 			return null
 		} else {
 			for (const [lang, categories] of Object.entries(data)) {
@@ -163,7 +171,7 @@ export class SvelteI18N<T extends { [category: string]: string } = any> {
 		if (!this.#updateKey) throw new Error("svelte-i18n.error_update_unavailable")
 
 		const [err, updated] = await safe(async () => this.#updateKey!(data)).asTuple()
-		if (err) console.error("[svelte-i18n] Failed to update translations", data, err)
+		if (err) this.logger.error("[svelte-i18n] Failed to update translations", data, err)
 		else {
 			for (const [lang, categories] of Object.entries(updated)) {
 				for (const [category, pairs] of Object.entries(categories)) {
@@ -324,8 +332,9 @@ export class SvelteI18N<T extends { [category: string]: string } = any> {
 				const tvalue = values[varname]
 				let matchResult: string | undefined
 				if (tvalue == undefined) {
-					console.error(`[svelte-i18n] Failed to interpolate $match: missing "${varname}" value`, {
+					this.logger.warn("[svelte-i18n] Failed to interpolate $match: missing value", {
 						expression: expr,
+						varname,
 						values,
 					})
 				} else {
@@ -334,7 +343,7 @@ export class SvelteI18N<T extends { [category: string]: string } = any> {
 					else matchResult = rules[tvalue.toString()] ?? rules["_"]
 
 					if (matchResult == undefined) {
-						console.warn("[svelte-i18n] Tried to interpolate a $match without a default case", {
+						this.logger.warn("[svelte-i18n] Tried to interpolate a $match without a default case", {
 							expression: expr,
 							values,
 						})
@@ -352,8 +361,9 @@ export class SvelteI18N<T extends { [category: string]: string } = any> {
 					value = (tvalue.prefix ?? "") + tvalue.visible + (tvalue.suffix ?? "")
 				else if (tvalue != undefined) value = tvalue.toString()
 				else
-					console.warn("[svelte-i18n] Tried to interpolate missing value", {
+					this.logger.warn("[svelte-i18n] Tried to interpolate missing value", {
 						expression: expr,
+						varname,
 						values,
 					})
 			} else if ((match = SvelteI18N.#regex_$if.exec(expr))) {
@@ -364,12 +374,13 @@ export class SvelteI18N<T extends { [category: string]: string } = any> {
 						(tvalue.prefix ?? "") + (tvalue.visible ? ifTrue : ifFalse) + (tvalue.suffix ?? "")
 				else if (tvalue != undefined) value = tvalue ? ifTrue : ifFalse
 				else
-					console.warn("[svelte-i18n] Tried to interpolate missing value", {
+					this.logger.warn("[svelte-i18n] Tried to interpolate missing value", {
 						expression: expr,
+						varname,
 						values,
 					})
 			} else {
-				console.error("[auto-18n] Failed to interpolate: could not understand expression", {
+				this.logger.warn("[svelte-i18n] Failed to interpolate: could not understand expression", {
 					expression: expr,
 					values,
 				})
@@ -392,7 +403,7 @@ export class SvelteI18N<T extends { [category: string]: string } = any> {
 		return this.#editor && editor ? this.#editor.renderContent(content, { url }) : content
 	}
 
-	withDefaults(defaultOpts: TOptions): typeof this.t {
+	withDefaults(defaultOpts: TOptions): this["t"] {
 		return (category, key, opts = {}) => this.t(category, key, { ...defaultOpts, ...opts })
 	}
 

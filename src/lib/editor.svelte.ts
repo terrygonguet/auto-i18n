@@ -28,7 +28,15 @@ export class SvelteI18NEditor {
 		this.i18n = i18n
 
 		// TODO notify user somehow?
-		this.i18n.loadAll().catch(console.error)
+		this.i18n
+			.loadAll()
+			.catch((error) =>
+				this.i18n.logger.error(
+					"[svelte-i18n] Failed to load all available translations",
+					{ autoload },
+					error,
+				),
+			)
 
 		const off = on(
 			document,
