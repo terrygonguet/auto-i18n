@@ -130,7 +130,7 @@ export class SvelteI18N<T extends { [category: string]: string } = any> {
 		const cached = this.#cache.get(cacheKey)
 		if (cached && skipIfCached) return cached
 
-		const [err, data] = await safe(async () => this.#fetchCategory!({ lang, category })).asTuple()
+		const [err, data] = await safe(async () => this.#fetchCategory({ lang, category })).asTuple()
 
 		if (err) {
 			this.logger.error("[svelte-i18n] Failed to load translations", { category, lang }, err)
@@ -220,7 +220,7 @@ export class SvelteI18N<T extends { [category: string]: string } = any> {
 
 		this.#cacheSubscribe()
 		this.#langSubscribe()
-		this.#editorSubscibe()
+		if (editor) this.#editorSubscibe()
 
 		let translations = this.#cache.get(lang + "." + category) ?? null
 		if (!translations && autoload) translations = await this.load(category, { lang })
