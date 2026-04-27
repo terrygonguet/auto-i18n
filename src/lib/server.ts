@@ -97,9 +97,9 @@ export function createSvelteI18NServerBundle({
 		updateKey,
 		async handle({ event, resolve }) {
 			if (!getLang) return resolve(event)
-			const lang = await getLang(event)
 			return resolve(event, {
-				transformPageChunk({ html }) {
+				async transformPageChunk({ html }) {
+					const lang = await getLang(event)
 					return html.replaceAll("%svelte-i18n.lang%", lang)
 				},
 			})
