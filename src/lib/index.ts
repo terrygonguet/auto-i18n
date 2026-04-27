@@ -122,45 +122,48 @@ export class SvelteI18N<T extends { [category: string]: string } = any> {
 		this.#cacheSubscribe = createSubscriber((update) => (this.#cacheChange = update))
 	}
 
-	async load(
+	async #load(
 		category: Extract<keyof T, string>,
-		{ lang = this.#lang, skipIfCached = false } = {},
+		{ lang = this.#lang, skipIfCached = true, useRemoteQueryRun = false } = {},
 	): Promise<TranslationCategory | null> {
 		const cacheKey = lang + "." + category
 		const cached = this.#cache.get(cacheKey)
 		if (cached && skipIfCached) return cached
 
-		const [err, data] = await safe(async () => this.#fetchCategory({ lang, category })).asTuple()
-
-		if (err) {
-			this.logger.error("[svelte-i18n] Failed to load translations", { category, lang }, err)
-			return null
-		} else {
-			this.#cache.set(cacheKey, data)
-			this.#cacheChange()
-			return data
-		}
+		return safe(async () => {
+			const promise = this.#fetchCategory({ lang, category })
+			return useRemoteQueryRun ? promise.run() : promise
+		}).match(
+			(data) => {
+				this.#cache.set(cacheKey, data)
+				this.#cacheChange()
+				return data
+			},
+			(err) => {
+				this.logger.error("[svelte-i18n] Failed to load translations", { category, lang }, err)
+				return null
+			},
+		)
 	}
 
 	async loadAll({ langs = "all" }: { langs?: "all" | string[] } = {}) {
 		if (!this.#fetchAll) throw new Error("svelte-i18n.error_fetchAll_unavailable")
 
-		const [err, data] = await safe(async () =>
-			this.#fetchAll!({ langs, categories: "all" }),
-		).asTuple()
-
-		if (err) {
-			this.logger.error("[svelte-i18n] Failed to load all translations", { langs }, err)
-			return null
-		} else {
-			for (const [lang, categories] of Object.entries(data)) {
-				for (const [category, pairs] of Object.entries(categories)) {
-					this.#cache.set(lang + "." + category, pairs)
+		return safe(() => this.#fetchAll!({ langs, categories: "all" }).run()).match(
+			(data) => {
+				for (const [lang, categories] of Object.entries(data)) {
+					for (const [category, pairs] of Object.entries(categories)) {
+						this.#cache.set(lang + "." + category, pairs)
+					}
 				}
-			}
-			this.#cacheChange()
-			return data
-		}
+				this.#cacheChange()
+				return data
+			},
+			(err) => {
+				this.logger.error("[svelte-i18n] Failed to load all translations", { langs }, err)
+				return null
+			},
+		)
 	}
 
 	async update(data: {
@@ -170,27 +173,27 @@ export class SvelteI18N<T extends { [category: string]: string } = any> {
 	}) {
 		if (!this.#updateKey) throw new Error("svelte-i18n.error_update_unavailable")
 
-		const [err, updated] = await safe(async () => this.#updateKey!(data)).asTuple()
-		if (err) this.logger.error("[svelte-i18n] Failed to update translations", data, err)
-		else {
-			for (const [lang, categories] of Object.entries(updated)) {
-				for (const [category, pairs] of Object.entries(categories)) {
-					this.#cache.set(lang + "." + category, pairs)
+		return safe(() => this.#updateKey!(data)).match(
+			(updated) => {
+				for (const [lang, categories] of Object.entries(updated)) {
+					for (const [category, pairs] of Object.entries(categories)) {
+						this.#cache.set(lang + "." + category, pairs)
+					}
 				}
-			}
-			this.#cacheChange()
-		}
+				this.#cacheChange()
+			},
+			(err) => this.logger.error("[svelte-i18n] Failed to update translations", data, err),
+		)
 	}
 
 	async setLang(lang: string) {
 		if (this.#lang == lang) return
 
-		const toLoad: Extract<keyof T, string>[] = []
-		for (const category of this.categoriesInUse) {
-			if (!this.#cache.has(lang + "." + category)) toLoad.push(category)
-		}
-		if (toLoad.length > 0)
-			await Promise.all(toLoad.map((category) => this.load(category, { lang })))
+		await Promise.all(
+			Array.from(this.#categoriesInUse).map((category) =>
+				this.#load(category, { lang, useRemoteQueryRun: true }),
+			),
+		)
 
 		this.#lang = lang
 		this.#langChange()
@@ -223,7 +226,7 @@ export class SvelteI18N<T extends { [category: string]: string } = any> {
 		if (editor) this.#editorSubscibe()
 
 		let translations = this.#cache.get(lang + "." + category) ?? null
-		if (!translations && autoload) translations = await this.load(category, { lang })
+		if (!translations && autoload) translations = await this.#load(category, { lang })
 
 		let text = translations?.[key]
 		if (typeof text == "string") text = await this.interpolate(text, values, options)
@@ -261,7 +264,7 @@ export class SvelteI18N<T extends { [category: string]: string } = any> {
 		this.#langSubscribe()
 
 		let translations = this.#cache.get(lang + "." + category) ?? null
-		if (!translations && autoload) translations = await this.load(category, { lang })
+		if (!translations && autoload) translations = await this.#load(category, { lang })
 
 		let text = translations?.[key]
 		if (typeof text == "string") return text
@@ -280,7 +283,7 @@ export class SvelteI18N<T extends { [category: string]: string } = any> {
 		this.#langSubscribe()
 
 		let translations = this.#cache.get(lang + "." + category) ?? null
-		if (!translations && autoload) translations = await this.load(category, { lang })
+		if (!translations && autoload) translations = await this.#load(category, { lang })
 
 		if (translations) return translations
 		else if (lang != this.#fallbackLang && allowFallbackLang)
