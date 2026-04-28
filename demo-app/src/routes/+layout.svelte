@@ -68,11 +68,11 @@
 	</p>
 
 	<p class="flex items-center gap-2">
-		<img class="h-5" src={globeSrc} alt="Globe icon" />
+		<img class="h-5" src={globeSrc} alt="" />
 		<select bind:value={() => i18n.lang, onLangChange} class="border border-teal-500 px-1 py-0.5">
 			{#each i18n.supportedLangs as lang}
 				<option value={lang}>
-					{@html await t("general", `langlang_${lang}`, { editor: false })}
+					{await t("general", `langlang_${lang}`, { editor: false })}
 				</option>
 			{/each}
 		</select>
