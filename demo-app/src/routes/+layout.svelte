@@ -13,6 +13,10 @@
 	let { i18n, t } = $derived(page.data) as LayoutData
 	let segment = $derived(page.route.id)
 
+	$effect(() => {
+		document.documentElement.setAttribute("lang", i18n.lang)
+	})
+
 	async function onLangChange(lang: string) {
 		const expires = new Date(3000, 0, 1)
 		document.cookie = `lang=${lang};expires=${expires.toUTCString()}`
