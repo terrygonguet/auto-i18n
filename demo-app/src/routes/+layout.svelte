@@ -16,7 +16,7 @@
 	async function onLangChange(lang: string) {
 		const expires = new Date(3000, 0, 1)
 		document.cookie = `lang=${lang};expires=${expires.toUTCString()}`
-		await i18n.setLang(lang)
+		i18n.lang = lang
 		await invalidate((url) => url.protocol == "content:")
 	}
 
