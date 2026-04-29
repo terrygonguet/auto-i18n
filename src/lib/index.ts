@@ -35,6 +35,10 @@ export class SvelteI18N<T extends { [category: string]: string } = any> {
 		this.#langSubscribe()
 		return this.#lang
 	}
+	set lang(lang: string) {
+		this.#lang = lang
+		this.#langChange()
+	}
 
 	#supportedLangs: string[]
 	get supportedLangs() {
@@ -184,19 +188,6 @@ export class SvelteI18N<T extends { [category: string]: string } = any> {
 			},
 			(err) => this.logger.error("[svelte-i18n] Failed to update translations", data, err),
 		)
-	}
-
-	async setLang(lang: string) {
-		if (this.#lang == lang) return
-
-		await Promise.all(
-			Array.from(this.#categoriesInUse).map((category) =>
-				this.#load(category, { lang, useRemoteQueryRun: true }),
-			),
-		)
-
-		this.#lang = lang
-		this.#langChange()
 	}
 
 	get t() {
