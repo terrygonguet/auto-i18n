@@ -50,9 +50,16 @@ export class SvelteI18N<T extends { [category: string]: string } = any> {
 		return this.#fallbackLang
 	}
 
-	#categoriesInUse = new Set<Extract<keyof T, string>>()
-	get categoriesInUse() {
-		return this.#categoriesInUse
+	get categoriesLoaded() {
+		this.#cacheSubscribe()
+		this.#langSubscribe()
+		return this.#cache
+			.keys()
+			.filter((key) => key.startsWith(this.#lang + "."))
+			.map((key) => {
+				const [_lang, category] = key.split(".", 2)
+				return category!
+			})
 	}
 
 	#keysInUse = new Set<string>()
@@ -207,7 +214,6 @@ export class SvelteI18N<T extends { [category: string]: string } = any> {
 		} = options
 
 		if (category != "svelte-i18n") {
-			this.categoriesInUse.add(category)
 			//! HACK geez I sure wish I had a record or a tuple...
 			this.#keysInUse.add(JSON.stringify([category, key]))
 		}
@@ -246,7 +252,6 @@ export class SvelteI18N<T extends { [category: string]: string } = any> {
 		{ lang = this.#lang, autoload = false, allowFallbackLang = false } = {},
 	): Promise<string | null> {
 		if (category != "svelte-i18n") {
-			this.categoriesInUse.add(category)
 			//! HACK geez I sure wish I had a record or a tuple...
 			this.#keysInUse.add(JSON.stringify([category, key]))
 		}
@@ -268,8 +273,6 @@ export class SvelteI18N<T extends { [category: string]: string } = any> {
 		category: Extract<keyof T, string>,
 		{ lang = this.#lang, autoload = false, allowFallbackLang = false } = {},
 	): Promise<TranslationCategory | null> {
-		if (category != "svelte-i18n") this.categoriesInUse.add(category)
-
 		this.#cacheSubscribe()
 		this.#langSubscribe()
 
