@@ -11,6 +11,7 @@ export interface SvelteI18NConstructorOptions {
 	fetchAll?: SvelteI18NServerBundle["fetchAll"]
 	updateKey?: SvelteI18NServerBundle["updateKey"]
 	logger?: SvelteI18N["logger"]
+	annotations?: SvelteI18N["annotations"]
 }
 
 export interface TOptions {
@@ -19,6 +20,7 @@ export interface TOptions {
 	lang?: string
 	overrideMissing?: string
 	values?: { [name: string]: TValue | undefined }
+	annotations?: SvelteI18N["annotations"]
 }
 
 export type TValue =
@@ -88,6 +90,10 @@ export class SvelteI18N<T extends { [category: string]: string } = any> {
 		error(message: string, details: any, error: Error): void
 	}
 
+	annotations:
+		| { [type: string]: (content: string, args?: string) => string }
+		| ((type: string, content: string, args?: string) => string)
+
 	constructor({
 		lang,
 		supportedLangs,
@@ -96,11 +102,13 @@ export class SvelteI18N<T extends { [category: string]: string } = any> {
 		fetchAll,
 		updateKey,
 		logger = console,
+		annotations = {},
 	}: SvelteI18NConstructorOptions) {
 		this.#lang = typeof lang == "string" ? lang : lang()
 		this.#supportedLangs = Array.isArray(supportedLangs) ? supportedLangs : supportedLangs()
 		this.#fallbackLang = typeof fallbackLang == "string" ? fallbackLang : fallbackLang()
 		this.logger = logger
+		this.annotations = annotations
 
 		if (!this.#supportedLangs.includes(this.#lang)) {
 			this.logger.warn(
@@ -142,8 +150,8 @@ export class SvelteI18N<T extends { [category: string]: string } = any> {
 		if (cached && skipIfCached) return cached
 
 		return safe(async () => {
-			const promise = this.#fetchCategory({ lang, category })
-			return useRemoteQueryRun ? promise.run() : promise
+			const query = this.#fetchCategory({ lang, category })
+			return useRemoteQueryRun ? query.run() : query
 		}).match(
 			(data) => {
 				this.#cache.set(cacheKey, data)
@@ -292,12 +300,14 @@ export class SvelteI18N<T extends { [category: string]: string } = any> {
 	static #regex_$t = /^\$t\s+(?<category>\S+)\.(?<key>\S+)(?:\s(?<lang>\S+))?$/
 	static #regex_$match = /^\$match\s+(?<varname>\S+)\s+(?<patterns>.+)$/
 	static #regex_$if = /^\$if\s+(?<varname>\S+)\s+(?<true>.+?)(?:\s+\$else\s+(?<false>.+))?$/
-	static #regex_base = /^(?<varname>\S+)$/
+	static #regex_varname = /^(?<varname>\S+)$/
+
+	static #regex_annotation = /\[\$(?<type>\S+)(?<args>.*)?\](?<content>.*)\[\/\k<type>\]/g
 
 	async interpolate(
 		text: string,
 		values: NonNullable<TOptions["values"]>,
-		options: Pick<TOptions, "autoload" | "lang" | "overrideMissing"> = {},
+		options: Pick<TOptions, "autoload" | "lang" | "overrideMissing" | "annotations"> = {},
 	): Promise<string> {
 		let start = 0
 		let end = 0
@@ -351,7 +361,7 @@ export class SvelteI18N<T extends { [category: string]: string } = any> {
 						value = (tvalue.prefix ?? "") + matchResult + (tvalue.suffix ?? "")
 					else value = matchResult
 				}
-			} else if ((match = SvelteI18N.#regex_base.exec(expr))) {
+			} else if ((match = SvelteI18N.#regex_varname.exec(expr))) {
 				const { varname = "" } = match.groups!
 				const tvalue = values[varname]
 				if (typeof tvalue == "object")
@@ -386,7 +396,22 @@ export class SvelteI18N<T extends { [category: string]: string } = any> {
 			result += text.slice(lastEnd, start) + value
 			lastEnd = end + 2
 		}
-		return result + text.slice(lastEnd)
+		const interpolated = result + text.slice(lastEnd)
+
+		const renderAnnotation = (type: string, content: string, args?: string): string => {
+			let result = content
+			if (typeof options.annotations == "function")
+				result = options.annotations(type, content, args)
+			else if (options.annotations?.[type]) result = options.annotations[type](content, args)
+			else if (typeof this.annotations == "function") result = this.annotations(type, content, args)
+			else if (this.annotations[type]) result = this.annotations[type](content, args)
+			return result
+		}
+		return interpolated.replaceAll(SvelteI18N.#regex_annotation, (...matches) => {
+			// matched groups are always the last argument
+			const { type = "", args, content = "" } = matches.at(-1) as Record<string, string>
+			return renderAnnotation(type, content, args?.trim())
+		})
 	}
 
 	get c() {
