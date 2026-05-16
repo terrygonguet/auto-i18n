@@ -61,12 +61,13 @@
 	<p>
 		{@html await t("footer", "made_by", {
 			values: {
-				name: {
-					prefix: `<a href="https://terry.gonguet.com" target="_blank" class="text-teal-700 underline">`,
-					visible: "Terry Gonguet",
-					suffix: "</a>",
-				},
+				name: "Terry Gonguet",
 				year: "2025",
+			},
+			annotations: {
+				link(content, args = "") {
+					return `<a href="${args}" target="_blank" class="text-teal-700 underline">${content}</a>`
+				},
 			},
 		})}
 	</p>
