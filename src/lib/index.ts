@@ -91,8 +91,8 @@ export class SvelteI18N<T extends { [category: string]: string } = any> {
 	}
 
 	annotations:
-		| { [type: string]: (content: string, args?: string) => string }
-		| ((type: string, content: string, args?: string) => string)
+		| { [type: string]: (content: string, args: string) => string }
+		| ((type: string, content: string, args: string) => string)
 
 	constructor({
 		lang,
@@ -302,7 +302,7 @@ export class SvelteI18N<T extends { [category: string]: string } = any> {
 	static #regex_$if = /^\$if\s+(?<varname>\S+)\s+(?<true>.+?)(?:\s+\$else\s+(?<false>.+))?$/
 	static #regex_varname = /^(?<varname>\S+)$/
 
-	static #regex_annotation = /\[\$(?<type>\S+)(?<args>.*?)?\](?<content>.*?)\[\/\k<type>\]/g
+	static #regex_annotation = /\[\$(?<type>\S+)(?<args>.*?)\](?<content>.*?)\[\/\k<type>\]/g
 
 	async interpolate(
 		text: string,
@@ -398,7 +398,7 @@ export class SvelteI18N<T extends { [category: string]: string } = any> {
 		}
 		const interpolated = result + text.slice(lastEnd)
 
-		const renderAnnotation = (type: string, content: string, args?: string): string => {
+		const renderAnnotation = (type: string, content: string, args: string): string => {
 			let result = content
 			if (typeof options.annotations == "function")
 				result = options.annotations(type, content, args)
@@ -409,8 +409,8 @@ export class SvelteI18N<T extends { [category: string]: string } = any> {
 		}
 		return interpolated.replaceAll(SvelteI18N.#regex_annotation, (...matches) => {
 			// matched groups are always the last argument
-			const { type = "", args, content = "" } = matches.at(-1) as Record<string, string>
-			return renderAnnotation(type, content, args?.trim())
+			const { type = "", args = "", content = "" } = matches.at(-1) as Record<string, string>
+			return renderAnnotation(type, content, args.trim())
 		})
 	}
 
