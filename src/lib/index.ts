@@ -302,7 +302,7 @@ export class SvelteI18N<T extends { [category: string]: string } = any> {
 	static #regex_$if = /^\$if\s+(?<varname>\S+)\s+(?<true>.+?)(?:\s+\$else\s+(?<false>.+))?$/
 	static #regex_varname = /^(?<varname>\S+)$/
 
-	static #regex_annotation = /\[\$(?<type>\S+)(?<args>.*)?\](?<content>.*)\[\/\k<type>\]/g
+	static #regex_annotation = /\[\$(?<type>\S+)(?<args>.*?)?\](?<content>.*?)\[\/\k<type>\]/g
 
 	async interpolate(
 		text: string,
