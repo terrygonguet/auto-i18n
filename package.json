@@ -42,17 +42,17 @@
 		"svelte": "^5.36.0"
 	},
 	"devDependencies": {
-		"@rollup/pluginutils": "^5.3.0",
+		"@rollup/pluginutils": "^5.4.0",
 		"@standard-schema/spec": "^1.1.0",
-		"@sveltejs/package": "^2.5.7",
+		"@sveltejs/package": "^2.5.8",
 		"@sveltejs/vite-plugin-svelte": "^7.1.2",
 		"nodemon": "^3.1.14",
-		"prettier": "^3.8.3",
-		"prettier-plugin-svelte": "^3.5.2",
+		"prettier": "^3.8.4",
+		"prettier-plugin-svelte": "^4.1.0",
 		"publint": "^0.3.21",
-		"svelte-check": "^4.4.8",
+		"svelte-check": "^4.6.0",
 		"typescript": "^6.0.3",
-		"vite": "^8.0.13"
+		"vite": "^8.0.16"
 	},
 	"dependencies": {
 		"@terrygonguet/utils": "^0.11.0"
