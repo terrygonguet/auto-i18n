@@ -143,16 +143,13 @@ export class SvelteI18N<T extends { [category: string]: string } = any> {
 
 	async #load(
 		category: Extract<keyof T, string>,
-		{ lang = this.#lang, skipIfCached = true, useRemoteQueryRun = false } = {},
+		{ lang = this.#lang, skipIfCached = true } = {},
 	): Promise<TranslationCategory | null> {
 		const cacheKey = lang + "." + category
 		const cached = this.#cache.get(cacheKey)
 		if (cached && skipIfCached) return cached
 
-		return safe(async () => {
-			const query = this.#fetchCategory({ lang, category })
-			return useRemoteQueryRun ? query.run() : query
-		}).match(
+		return safe(async () => this.#fetchCategory({ lang, category })).match(
 			(data) => {
 				this.#cache.set(cacheKey, data)
 				this.#cacheChange()
@@ -168,7 +165,7 @@ export class SvelteI18N<T extends { [category: string]: string } = any> {
 	async loadAll({ langs = "all" }: { langs?: "all" | string[] } = {}) {
 		if (!this.#fetchAll) throw new Error("svelte-i18n.error_fetchAll_unavailable")
 
-		return safe(() => this.#fetchAll!({ langs, categories: "all" }).run()).match(
+		return safe(() => this.#fetchAll!({ langs, categories: "all" })).match(
 			(data) => {
 				for (const [lang, categories] of Object.entries(data)) {
 					for (const [category, pairs] of Object.entries(categories)) {
