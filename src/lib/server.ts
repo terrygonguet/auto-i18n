@@ -200,8 +200,9 @@ const updateValidator: StandardSchemaV1<{
 			if (typeof langs != "object" || !langs)
 				issues.push({ message: "svelte-i18n.error_missing_langs", path: ["langs"] })
 			else {
-				for (const lang of Object.values(langs)) {
-					if (typeof lang != "string" || !lang)
+				for (const lang in langs) {
+					const value = (langs as Record<string, unknown>)[lang]
+					if (typeof value != "string")
 						issues.push({ message: "svelte-i18n.error_bad_lang", path: ["langs", lang] })
 				}
 			}
