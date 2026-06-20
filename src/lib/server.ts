@@ -35,7 +35,7 @@ export interface SvelteI18NServerBundle {
 	>
 	updateKey: RemoteCommand<
 		{ category: string; key: string; langs: { [lang: string]: string } },
-		Promise<Translations>
+		Translations
 	>
 	handle: Handle
 }

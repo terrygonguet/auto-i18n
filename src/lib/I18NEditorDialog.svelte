@@ -70,9 +70,10 @@
 	)
 	let transform = $derived(
 		placementMode == "under"
-			? `translate(calc(${targetX}px - 50%), calc(${targetY}px + 1rem))`
-			: `translate(calc(${targetX}px - 50%), calc(${targetY}px - 100% - 1rem))`,
+			? `translate(clamp(1rem, ${targetX}px - 50%, 100dvw - 1rem), calc(${targetY}px + 1rem))`
+			: `translate(clamp(1rem, ${targetX}px - 50%, 100dvw - 1rem), calc(${targetY}px - 100% - 1rem))`,
 	)
+	$inspect(transform)
 
 	$effect(() =>
 		open((args) => {
